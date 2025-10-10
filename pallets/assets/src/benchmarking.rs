@@ -5,6 +5,7 @@ use crate::Pallet as Assets;
 use frame_benchmarking::v2::*;
 use frame_system::RawOrigin;
 
+#[benchmarks]
 mod benchmark{
     use super::*;
 
@@ -34,7 +35,7 @@ mod benchmark{
 
             //now withdraw
             #[extrinsic_call]
-            withdraw(RawOrigin::Signed(caller), asset_id, amount);
+            withdraw(RawOrigin::Signed(caller.clone()), asset_id, amount);
 
             assert_eq!(
                 FreeBalance::<T>::get(&caller, asset_id),
@@ -42,5 +43,5 @@ mod benchmark{
             );
     }
 
-    impl_benchmark_test_suite!(Asset, crate::mock::new_test_ext(, crate::mock::Test));
+    impl_benchmark_test_suite!(Assets, crate::mock::new_test_ext(), crate::mock::Test);
 }

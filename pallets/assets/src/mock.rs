@@ -34,7 +34,7 @@ impl frame_system::Config for Test{
 
 impl pallet_assets::Config for Test{
     type RuntimeEvent = RuntimeEvent;
-    type WeightInfo = ();
+    type WeightInfo = pallet_assets::weights::SubstrateWeight<Test>;
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
