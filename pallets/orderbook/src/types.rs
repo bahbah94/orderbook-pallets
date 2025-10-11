@@ -1,8 +1,10 @@
 use codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use sp_runtime::RuntimeDebug;
+use frame_support::sp_runtime::RuntimeDebug;
+use frame_system::*;
+use frame_support::pallet_prelude::*;
 
-#[derive(Encode,Decode, Clone,Copy,RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen)]
+#[derive(Encode,Decode, Clone,Copy,RuntimeDebug, PartialEq, Eq, TypeInfo, MaxEncodedLen,DecodeWithMemTracking)]
 pub enum OrderSide {
     Buy,
     Sell,
@@ -16,7 +18,7 @@ pub enum OrderStatus {
     Open,
 }
 
-#[derive(Encode,Decode, Clone, Debug,Copy,RuntimeDebug, PartialEq, Eq, TypeInfo,MaxEncodedLen)]
+#[derive(Encode,Decode, Clone,Copy,RuntimeDebug, PartialEq, Eq, TypeInfo,MaxEncodedLen,DecodeWithMemTracking)]
 pub enum OrderType{
     Market,
     Limit,
@@ -30,7 +32,7 @@ pub struct MarketPair{
     pub quote_asset : AssetId,
 }
 
-#[derive(Encode,Decode, Clone, Debug,RuntimeDebug, PartialEq, Eq, TypeInfo,MaxEncodedLen)]
+#[derive(Encode,Decode, Clone,RuntimeDebug, PartialEq, Eq, TypeInfo,MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 pub struct Order<T: Config>{
     pub order_id: OrderId,
@@ -40,10 +42,11 @@ pub struct Order<T: Config>{
     pub order_type: OrderType,
     pub price: Amount,
     pub quantity: Amount,
-    pub filled_quantity: Amount
+    pub filled_quantity: Amount,
+    pub ttl: Option<u32>,
 }
 
-#[derive(Encode,Decode, Clone, Debug,RuntimeDebug, PartialEq, Eq, TypeInfo,MaxEncodedLen)]
+#[derive(Encode,Decode, Clone,RuntimeDebug, PartialEq, Eq, TypeInfo,MaxEncodedLen)]
 #[scale_info(skip_type_params(T))]
 pub struct Trade<T: Config> {
     pub trade_id: TradeId,
@@ -58,4 +61,4 @@ pub struct Trade<T: Config> {
 pub type OrderId = u64;
 pub type TradeId = u64;
 pub type AssetId = u32;
-pub type Balance = u128;
+pub type Amount = u128;
