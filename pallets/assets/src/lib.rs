@@ -195,7 +195,7 @@ pub mod pallet {
             })?;
 
             //move it to transferred .ie to account
-            LockedBalance::<T>::mutate(to, asset_id, |balance| {
+            FreeBalance::<T>::mutate(to, asset_id, |balance| {
                 *balance = balance.saturating_add(amount)
 
             });
