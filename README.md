@@ -1,232 +1,314 @@
-# Substrate Node Template
+# Substrate Orderbook DEX
 
-A fresh [Substrate](https://substrate.io/) node, ready for hacking :rocket:
+A decentralized exchange (DEX) built on Substrate with a limit orderbook and batch matching engine.
 
-A standalone version of this template is available for each release of Polkadot
-in the [Substrate Developer Hub Parachain
-Template](https://github.com/substrate-developer-hub/substrate-node-template/)
-repository. The parachain template is generated directly at each Polkadot
-release branch from the [Solochain Template in
-Substrate](https://github.com/paritytech/polkadot-sdk/tree/master/templates/solochain)
-upstream
+## Overview
 
-It is usually best to use the stand-alone version to start a new project. All
-bugs, suggestions, and feature requests should be made upstream in the
-[Substrate](https://github.com/paritytech/polkadot-sdk/tree/master/substrate)
-repository.
+This project implements a fully functional orderbook-based DEX on Substrate, featuring:
+
+- **Limit & Market Orders**: Support for both order types with price-time priority matching
+- **Batch Matching Engine**: Orders are matched once per block at finalization for optimal gas efficiency
+- **Two-Phase Matching**: Pending orders match internally first, then with the persistent orderbook
+- **Custom Assets Pallet**: Manages USDT and ETH balances with lock/unlock functionality
+- **Atomic Settlement**: All trades are settled atomically with proper fund transfers
+
+## Architecture
+
+### Two-Phase Design
+1. **Order Submission** (during block): Orders validated and queued in temporary cache
+2. **Batch Matching** (on_finalize): All orders matched once, funds settled, cache cleared
+
+### Benefits
+- ✅ Constant-time order submission (no matching during extrinsic)
+- ✅ Single matching pass per block (more efficient than per-order matching)
+- ✅ Better price discovery (orders within same block match first)
+- ✅ Prevents race conditions and MEV attacks
+
+## Pallets
+
+### 1. Assets Pallet (`pallets/assets`)
+
+Manages user balances for trading assets (USDT and ETH).
+
+**Key Features:**
+- Deposit/withdraw funds
+- Lock funds for active orders
+- Unlock funds for cancellations
+- Transfer locked funds for trade settlement
+
+**Storage:**
+- `FreeBalance`: Available user balances
+- `LockedBalance`: Funds locked in active orders
+
+### 2. Orderbook Pallet (`pallets/orderbook`)
+
+Core DEX functionality with orderbook matching engine.
+
+**Key Features:**
+- Place limit and market orders
+- Cancel pending orders
+- Automatic batch matching at block finalization
+- Price-time priority (FIFO within price levels)
+- Partial order fills
+- TTL-based order expiry
+
+**Storage:**
+- **Persistent:**
+  - `Orders`: All order details
+  - `Trades`: Trade history
+  - `Bids`/`Asks`: Active orderbook (price → order IDs)
+  - `UserOrders`: User's order list
+  
+- **Temporary Cache (cleared each block):**
+  - `PendingBids`/`PendingAsks`: Orders submitted this block
+  - `PendingCancellations`: Cancellation requests
+
+**Extrinsics:**
+- `place_order(side, price, quantity, order_type)`: Submit a new order
+- `cancel_order(order_id)`: Cancel an existing order
+
+### 3. Matching Engine (`pallets/orderbook/src/engine.rs`)
+
+Pure matching logic separated from pallet for clarity.
+
+**Functions:**
+- `match_pending_internal`: Match pending orders amongst themselves
+- `match_with_persistent`: Match unmatched orders with persistent orderbook
+- `match_buy_order`/`match_sell_order`: Core matching logic with price-time priority
+- `execute_trade`: Update order states and create trade records
+- `process_cancellations`: Handle order cancellations
+
+## Matching Flow
+
+```
+Block N starts
+  ↓
+Users submit orders via place_order()
+  → Orders stored in Orders<T>
+  → Added to PendingBids/PendingAsks cache
+  → Funds locked
+  ↓
+Block N ends → on_finalize() triggered
+  ↓
+1. Process cancellations
+   → Remove from orderbook
+   → Unlock funds
+  ↓
+2. Match pending orders internally
+   → Pending orders match with each other first
+   → Returns trades + unmatched orders
+  ↓
+3. Match unmatched with persistent orderbook
+   → Try to match survivors with existing orders
+   → Add remainder to persistent orderbook
+  ↓
+4. Execute all trades
+   → transfer_locked (buyer → seller: USDT)
+   → transfer_locked (seller → buyer: ETH)
+   → unlock_funds for both parties
+   → Store trade records
+   → Emit events
+  ↓
+5. Update storage
+   → Save modified orders
+   → Save persistent orderbook
+   → Clear pending cache
+  ↓
+Block N+1 starts fresh
+```
+
+## Example Trade
+
+```
+Initial State:
+  Alice: 10,000 USDT (free)
+  Bob: 100 ETH (free)
+
+Alice places order:
+  place_order(Buy, 100 USDT, 10 ETH, Limit)
+  → lock_funds(Alice, USDT, 1000)
+  → Add to PendingBids
+
+Bob places order:
+  place_order(Sell, 98 USDT, 10 ETH, Limit)
+  → lock_funds(Bob, ETH, 10)
+  → Add to PendingAsks
+
+on_finalize():
+  1. Match pending orders
+     → Bob's sell @ 98 matches Alice's buy @ 100
+     → Execute at maker price: 100 USDT (Alice's limit)
+  
+  2. Settle trade
+     → transfer_locked(Alice → Bob, USDT, 1000)
+     → transfer_locked(Bob → Alice, ETH, 10)
+     → unlock_funds(Bob, USDT, 1000)
+     → unlock_funds(Alice, ETH, 10)
+
+Final State:
+  Alice: 9,000 USDT, 10 ETH
+  Bob: 1,000 USDT, 90 ETH
+```
+
+## Types
+
+### Order
+```rust
+pub struct Order<T: Config> {
+    pub order_id: OrderId,
+    pub trader: T::AccountId,
+    pub side: OrderSide,           // Buy or Sell
+    pub status: OrderStatus,       // Open, PartiallyFilled, Filled, Cancelled, Expired
+    pub order_type: OrderType,     // Market or Limit
+    pub price: Amount,             // Price per unit
+    pub quantity: Amount,          // Total quantity
+    pub filled_quantity: Amount,   // Amount filled so far
+    pub ttl: Option<u32>,         // Time-to-live (blocks)
+}
+```
+
+### Trade
+```rust
+pub struct Trade<T: Config> {
+    pub trade_id: TradeId,
+    pub buyer: T::AccountId,
+    pub seller: T::AccountId,
+    pub buy_order_id: OrderId,
+    pub sell_order_id: OrderId,
+    pub price: Amount,
+    pub quantity: Amount,
+}
+```
 
 ## Getting Started
 
-Depending on your operating system and Rust version, there might be additional
-packages required to compile this template. Check the
-[Install](https://docs.substrate.io/install/) instructions for your platform for
-the most common dependencies. Alternatively, you can use one of the [alternative
-installation](#alternatives-installations) options.
-
-Fetch solochain template code:
-
-```sh
-git clone https://github.com/paritytech/polkadot-sdk-solochain-template.git solochain-template
-
-cd solochain-template
-```
-
 ### Build
-
-🔨 Use the following command to build the node without launching it:
 
 ```sh
 cargo build --release
 ```
 
-### Embedded Docs
-
-After you build the project, you can use the following command to explore its
-parameters and subcommands:
-
-```sh
-./target/release/solochain-template-node -h
-```
-
-You can generate and view the [Rust
-Docs](https://doc.rust-lang.org/cargo/commands/cargo-doc.html) for this template
-with this command:
-
-```sh
-cargo +nightly doc --open
-```
-
-### Single-Node Development Chain
-
-The following command starts a single-node development chain that doesn't
-persist state:
+### Run Development Chain
 
 ```sh
 ./target/release/solochain-template-node --dev
 ```
 
-To purge the development chain's state, run the following command:
+### Purge Chain State
 
 ```sh
 ./target/release/solochain-template-node purge-chain --dev
 ```
 
-To start the development chain with detailed logging, run the following command:
+### Connect with Polkadot-JS Apps
 
-```sh
-RUST_BACKTRACE=1 ./target/release/solochain-template-node -ldebug --dev
+Visit [Polkadot/Substrate Portal](https://polkadot.js.org/apps/#/explorer?rpc=ws://localhost:9944) and connect to your local node.
+
+## Usage
+
+### 1. Deposit Funds (Assets Pallet)
+
+```javascript
+// Deposit 10,000 USDT
+api.tx.assets.deposit(0, 10000000000); // USDT = asset_id 0
+
+// Deposit 100 ETH
+api.tx.assets.deposit(1, 100000000000); // ETH = asset_id 1
 ```
 
-Development chains:
+### 2. Place Order (Orderbook Pallet)
 
-- Maintain state in a `tmp` folder while the node is running.
-- Use the **Alice** and **Bob** accounts as default validator authorities.
-- Use the **Alice** account as the default `sudo` account.
-- Are preconfigured with a genesis state (`/node/src/chain_spec.rs`) that
-  includes several pre-funded development accounts.
+```javascript
+// Buy 10 ETH at 100 USDT each (limit order)
+api.tx.orderbook.placeOrder(
+  { Buy },           // side
+  100000000000,      // price (100 USDT)
+  10000000000,       // quantity (10 ETH)
+  { Limit }          // order_type
+);
 
-
-To persist chain state between runs, specify a base path by running a command
-similar to the following:
-
-```sh
-// Create a folder to use as the db base path
-$ mkdir my-chain-state
-
-// Use of that folder to store the chain state
-$ ./target/release/solochain-template-node --dev --base-path ./my-chain-state/
-
-// Check the folder structure created inside the base path after running the chain
-$ ls ./my-chain-state
-chains
-$ ls ./my-chain-state/chains/
-dev
-$ ls ./my-chain-state/chains/dev
-db keystore network
+// Sell 10 ETH at market price
+api.tx.orderbook.placeOrder(
+  { Sell },
+  0,                 // price (ignored for market orders)
+  10000000000,
+  { Market }
+);
 ```
 
-### Connect with Polkadot-JS Apps Front-End
+### 3. Cancel Order
 
-After you start the node template locally, you can interact with it using the
-hosted version of the [Polkadot/Substrate
-Portal](https://polkadot.js.org/apps/#/explorer?rpc=ws://localhost:9944)
-front-end by connecting to the local node endpoint. A hosted version is also
-available on [IPFS](https://dotapps.io/). You can
-also find the source code and instructions for hosting your own instance in the
-[`polkadot-js/apps`](https://github.com/polkadot-js/apps) repository.
+```javascript
+// Cancel order by ID
+api.tx.orderbook.cancelOrder(123);
+```
 
-### Multi-Node Local Testnet
+### 4. Query Orders
 
-If you want to see the multi-node consensus algorithm in action, see [Simulate a
-network](https://docs.substrate.io/tutorials/build-a-blockchain/simulate-network/).
+```javascript
+// Get order details
+const order = await api.query.orderbook.orders(orderId);
 
-## Template Structure
+// Get user's orders
+const userOrders = await api.query.orderbook.userOrders(accountId);
 
-A Substrate project such as this consists of a number of components that are
-spread across a few directories.
+// Get bids at price level
+const bids = await api.query.orderbook.bids(100000000000);
 
-### Node
+// Get asks at price level
+const asks = await api.query.orderbook.asks(100000000000);
+```
 
-A blockchain node is an application that allows users to participate in a
-blockchain network. Substrate-based blockchain nodes expose a number of
-capabilities:
+## Events
 
-- Networking: Substrate nodes use the [`libp2p`](https://libp2p.io/) networking
-  stack to allow the nodes in the network to communicate with one another.
-- Consensus: Blockchains must have a way to come to
-  [consensus](https://docs.substrate.io/fundamentals/consensus/) on the state of
-  the network. Substrate makes it possible to supply custom consensus engines
-  and also ships with several consensus mechanisms that have been built on top
-  of [Web3 Foundation
-  research](https://research.web3.foundation/Polkadot/protocols/NPoS).
-- RPC Server: A remote procedure call (RPC) server is used to interact with
-  Substrate nodes.
+- `OrderPlaced`: New order submitted
+- `TradeExecuted`: Trade matched and executed
+- `OrderFilled`: Order completely filled
+- `OrderPartiallyFilled`: Order partially filled
+- `OrderCancelled`: Order cancelled by user
+- `CancellationRequested`: Cancellation queued for processing
+- `MatchingCompleted`: Block finalization complete (summary stats)
 
-There are several files in the `node` directory. Take special note of the
-following:
+## Configuration
 
-- [`chain_spec.rs`](./node/src/chain_spec.rs): A [chain
-  specification](https://docs.substrate.io/build/chain-spec/) is a source code
-  file that defines a Substrate chain's initial (genesis) state. Chain
-  specifications are useful for development and testing, and critical when
-  architecting the launch of a production chain. Take note of the
-  `development_config` and `testnet_genesis` functions. These functions are
-  used to define the genesis state for the local development chain
-  configuration. These functions identify some [well-known
-  accounts](https://docs.substrate.io/reference/command-line-tools/subkey/) and
-  use them to configure the blockchain's initial state.
-- [`service.rs`](./node/src/service.rs): This file defines the node
-  implementation. Take note of the libraries that this file imports and the
-  names of the functions it invokes. In particular, there are references to
-  consensus-related topics, such as the [block finalization and
-  forks](https://docs.substrate.io/fundamentals/consensus/#finalization-and-forks)
-  and other [consensus
-  mechanisms](https://docs.substrate.io/fundamentals/consensus/#default-consensus-models)
-  such as Aura for block authoring and GRANDPA for finality.
+Configure constants in your runtime:
 
+```rust
+impl pallet_orderbook::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type MaxPendingOrders = ConstU32<1000>;        // Max orders per block
+    type MaxCancellationOrders = ConstU32<100>;    // Max cancellations per block
+    type MaxOrders = ConstU32<10000>;              // Max orders per price level
+    type MaxUserOrders = ConstU32<1000>;           // Max orders per user
+}
+```
 
-### Runtime
+## TODO
 
-In Substrate, the terms "runtime" and "state transition function" are analogous.
-Both terms refer to the core logic of the blockchain that is responsible for
-validating blocks and executing the state changes they define. The Substrate
-project in this repository uses
-[FRAME](https://docs.substrate.io/learn/runtime-development/#frame) to construct
-a blockchain runtime. FRAME allows runtime developers to declare domain-specific
-logic in modules called "pallets". At the heart of FRAME is a helpful [macro
-language](https://docs.substrate.io/reference/frame-macros/) that makes it easy
-to create pallets and flexibly compose them to create blockchains that can
-address [a variety of needs](https://substrate.io/ecosystem/projects/).
+- [ ] Order pruning/expiry logic (TTL-based)
+- [ ] Mock runtime for testing
+- [ ] Comprehensive unit tests
+- [ ] Benchmark weights
+- [ ] Stop-loss orders
+- [ ] Good-til-cancelled (GTC) orders
+- [ ] Fill-or-kill (FOK) orders
+- [ ] Immediate-or-cancel (IOC) orders
 
-Review the [FRAME runtime implementation](./runtime/src/lib.rs) included in this
-template and note the following:
+## Key Design Decisions
 
-- This file configures several pallets to include in the runtime. Each pallet
-  configuration is defined by a code block that begins with `impl
-  $PALLET_NAME::Config for Runtime`.
-- The pallets are composed into a single runtime by way of the
-  [#[runtime]](https://paritytech.github.io/polkadot-sdk/master/frame_support/attr.runtime.html)
-  macro, which is part of the [core FRAME pallet
-  library](https://docs.substrate.io/reference/frame-pallets/#system-pallets).
+- **Batch matching**: All orders matched once per block (not per-order)
+- **Two-phase matching**: Pending orders match internally before checking persistent orderbook
+- **OrderId-based storage**: Orderbook stores IDs, not full Order structs (saves space)
+- **BoundedVec for cache**: DoS prevention on temporary storage
+- **Vec for persistent**: Orders naturally accumulate, no hard limit
+- **Price-time priority**: Standard exchange rules (best price first, FIFO within price level)
 
-### Pallets
+## License
 
-The runtime in this project is constructed using many FRAME pallets that ship
-with [the Substrate
-repository](https://github.com/paritytech/polkadot-sdk/tree/master/substrate/frame) and a
-template pallet that is [defined in the
-`pallets`](./pallets/template/src/lib.rs) directory.
+Unlicense
 
-A FRAME pallet is comprised of a number of blockchain primitives, including:
+## Resources
 
-- Storage: FRAME defines a rich set of powerful [storage
-  abstractions](https://docs.substrate.io/build/runtime-storage/) that makes it
-  easy to use Substrate's efficient key-value database to manage the evolving
-  state of a blockchain.
-- Dispatchables: FRAME pallets define special types of functions that can be
-  invoked (dispatched) from outside of the runtime in order to update its state.
-- Events: Substrate uses
-  [events](https://docs.substrate.io/build/events-and-errors/) to notify users
-  of significant state changes.
-- Errors: When a dispatchable fails, it returns an error.
-
-Each pallet has its own `Config` trait which serves as a configuration interface
-to generically define the types and parameters it depends on.
-
-## Alternatives Installations
-
-Instead of installing dependencies and building this source directly, consider
-the following alternatives.
-
-### Nix
-
-Install [nix](https://nixos.org/) and
-[nix-direnv](https://github.com/nix-community/nix-direnv) for a fully
-plug-and-play experience for setting up the development environment. To get all
-the correct dependencies, activate direnv `direnv allow`.
-
-### Docker
-
-Please follow the [Substrate Docker instructions
-here](https://github.com/paritytech/polkadot-sdk/blob/master/substrate/docker/README.md) to
-build the Docker container with the Substrate Node Template binary.
+- [Substrate Documentation](https://docs.substrate.io/)
+- [Polkadot-JS Apps](https://polkadot.js.org/apps/)
+- [FRAME Development](https://docs.substrate.io/learn/runtime-development/)
