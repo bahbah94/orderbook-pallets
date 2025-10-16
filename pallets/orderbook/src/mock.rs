@@ -1,9 +1,8 @@
+use crate as pallet_orderbook;
 use frame_support::derive_impl;
 use frame_system::pallet;
-use sp_runtime::BuildStorage;
-use crate as pallet_orderbook;
 use sp_runtime::traits::parameter_types;
-
+use sp_runtime::BuildStorage;
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -21,7 +20,7 @@ mod runtime {
         RuntimeHoldReason,
         RuntimeSlashReason,
         RuntimeLockId,
-        RuntimeTask,
+        RuntimeTask
     )]
 
     pub struct Test;
@@ -34,7 +33,6 @@ mod runtime {
 
     #[runtime::pallet_index(2)]
     pub type Orderbook = pallet_orderbook::Pallet<Test>;
-
 }
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
@@ -42,7 +40,7 @@ impl frame_system::Config for Test {
     type Block = Block;
 }
 
-impl pallet_assets::Config for Test{
+impl pallet_assets::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = ();
 }
@@ -60,8 +58,8 @@ impl pallet_orderbook::Config for Test {
     type MaxCancellationOrders = MaxCancellationOrders;
     type MaxOrders = MaxOrders;
     type MaxUserOrders = MaxUserOrders;
+    type WeightInfo = pallet_orderbook::weights::SubstrateWeight<Test>;
 }
-
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
     frame_system::GenesisConfig::<Test>::default()
@@ -69,5 +67,3 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
         .unwrap()
         .into()
 }
-
-
