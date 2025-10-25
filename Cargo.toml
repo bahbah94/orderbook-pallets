@@ -11,7 +11,7 @@ members = [
     "pallets/template",
     "pallets/assets",
     "pallets/orderbook",
-    "runtime",
+    "runtime", "indexer",
 ]
 resolver = "2"
 
