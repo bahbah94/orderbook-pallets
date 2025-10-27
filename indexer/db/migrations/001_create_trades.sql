@@ -1,0 +1,35 @@
+--- Trades table: Stores executed trades from TradeExecuted Event
+CREATE TABLE IF NOT EXISTS trades (
+
+    trade_id BIGINT PRIMARY KEY,
+
+    block_number BIGINT NOT NULL,
+
+    buyer VARCHAR(255) NOT NULL,
+    seller VARCHAR(255) NOT NULL,
+
+    -- Trade details
+    price NUMERIC(38, 0) NOT NULL,  -- u128 from on-chain
+    quantity NUMERIC(38, 0) NOT NULL,  -- u128 from on-chain
+    value NUMERIC(38, 0) NOT NULL,  -- price * quantity
+    
+    -- Metadata
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+--- NOW lets create some indexes for faster accesss for different requirements
+CREATE INDEX IF NOT EXISTS idx_trades_trade_id ON trades(trade_id);
+
+CREATE INDEX IF NOT EXISTS idx_trades_block_timestamp ON trades(block_timestamp DESC);
+
+CREATE INDEX IF NOT EXISTS idx_trades_buyer ON trades(buyer);
+CREATE INDEX IF NOT EXISTS idx_trades_seller ON trades(seller);
+
+CREATE INDEX IF NOT EXISTS idx_trades_buyer_timestamp ON trades(buyer, block_timestamp DESC);
+CREATE INDEX IF NOT EXISTS idx_trades_seller_timestamp ON trades(seller, block_timestamp DESC);
+
+CREATE INDEX IF NOT EXISTS idx_trades_buy_order_id ON trades(buy_order_id);
+CREATE INDEX IF NOT EXISTS idx_trades_sell_order_id ON trades(sell_order_id);
+
+
