@@ -10,7 +10,7 @@ pub async fn init_pool(database_url: &str) -> Result<PgPool> {
 
 pub async fn run_migrations(pool: &PgPool) -> Result<()> {
     // Read and execute the migrations SQL file
-    let sql = include_str!("../db/migrations/001_create_trades.sql");
+    let sql = include_str!("../../db/migrations/001_create_trades.sql");
     
     // Split by statements and execute
     for statement in sql.split(';').filter(|s| !s.trim().is_empty()) {

@@ -34,4 +34,3 @@ async fn main() -> Result<()> {
     event_collector::start(&node_url, pool).await?;
 
     Ok(())
-}
