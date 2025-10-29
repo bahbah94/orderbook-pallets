@@ -130,6 +130,7 @@ pub mod pallet {
         OrderPlaced {
             order_id: OrderId,
             side: OrderSide,
+            asset_id: u32,
             price: Amount,
             quantity: Amount,
         },
@@ -398,6 +399,7 @@ pub mod pallet {
                         order_id: *order_id,
                         trader: order.trader.clone(),
                     });
+                    Orders::<T>::remove(order_id);
                 } else if order.status == OrderStatus::PartiallyFilled {
                     let remaining = order.quantity.saturating_sub(order.filled_quantity);
                     Self::deposit_event(Event::OrderPartiallyFilled {
@@ -546,6 +548,7 @@ pub mod pallet {
                 order_id: order_id,
                 side: side,
                 price: price,
+                asset_id: if side == OrderSide::Buy { USDT } else { ETH },
                 quantity: quantity,
             });
 

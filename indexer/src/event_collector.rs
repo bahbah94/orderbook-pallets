@@ -31,14 +31,14 @@ pub async fn start(node_url: &str, pool: PgPool) -> Result<()> {
             let event_name = evt.variant_name();
             let event_values = evt.field_values()?;
 
-            println!("        {}_{}", pallet_name, event_name);
-            println!("          {}", event_values);
+            //println!("        {}_{}", pallet_name, event_name);
+            //println!("          {}", event_values);
 
             // Route to appropriate handler
             match (pallet_name, event_name) {
                 ("Orderbook", "TradeExecuted") => {
                     println!("🎯 TradeExecuted event detected!");
-                    println!("Raw event_values: {:?}", event_values);
+                    //println!("Raw event_values: {:?}", event_values);
 
                     
                     // wrapping it for completeness and consistency
@@ -60,15 +60,19 @@ pub async fn start(node_url: &str, pool: PgPool) -> Result<()> {
                 },
                 ("Orderbook", "OrderPlaced") => {
                     info!("📦 Order placed in block {}", block_number);
+                    println!("Order placed with raw events {}", event_values);
                 },
                 ("Orderbook", "OrderCancelled") => {
                     info!("❌ Order cancelled in block {}", block_number);
+                    println!("Order cancelled with raw events {}", event_values);
                 },
                 ("Orderbook", "OrderFilled") => {
                     info!("✅ Order filled in block {}", block_number);
+                    println!("Order filled with raw events {}", event_values);
                 },
                 ("Orderbook", "OrderPartiallyFilled") => {
                     info!("📊 Order partially filled in block {}", block_number);
+                    println!("Order partiallyfilled with raw events {}", event_values);
                 },
                 _ => {
                     // Ignore events from other pallets

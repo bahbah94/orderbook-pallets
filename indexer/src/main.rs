@@ -6,6 +6,7 @@ use tracing::info;
 mod db;
 mod event_collector;
 mod trade_mapper;
+mod orderbook_reducer;
 
 #[tokio::main]
 async fn main() -> Result<()> {
