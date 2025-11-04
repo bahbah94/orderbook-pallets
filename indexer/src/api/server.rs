@@ -14,14 +14,14 @@ pub async fn run_server(
     let app_state = (orderbook, pool);
     let app = Router::new()
             //REST API endpoints
-            .route(todo!("orderbook"))
-            .route(todo!("order/:id"))
+            .route("/api/orderbook", get(handlers::orderbook::get_orderbook))
+            .route("/api/order/:id", get(handlers::orderbook::get_order))
 
             //websocket stuff
-            .route(todo!("/ws/orderbook"))
+            .route("ws/orderbook", get(websocket::ws_orderbook::ws_handler))
 
             //health stuff
-            .route("/health", get(|| async { "OK" }))
+            .route("/health", get(|| async { "OK" })) // should be modified not sure
 
             .layer(
                 CorsLayer::new()
