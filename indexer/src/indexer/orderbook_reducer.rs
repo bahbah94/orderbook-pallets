@@ -3,7 +3,6 @@ use sqlx::PgPool;
 use std::collections::BTreeMap;
 use tokio::sync::broadcast;
 use tracing::info;
-use tracing_subscriber::filter::combinator::Or;
 
 /// Update event for orderbook changes
 #[derive(Debug, Clone)]
@@ -14,6 +13,7 @@ pub enum OrderbookUpdateEvent {
     OrderPartiallyFilled,
 }
 
+#[derive(Debug)]
 pub struct OrderbookState {
     pub bids: BTreeMap<u128, Vec<u64>>,
     pub asks: BTreeMap<u128, Vec<u64>>,
@@ -22,6 +22,7 @@ pub struct OrderbookState {
     broadcast_tx: Option<broadcast::Sender<OrderbookUpdateEvent>>,
 }
 
+#[derive(Debug)]
 pub struct OrderInfo {
     pub order_id: u64,
     //pub trade: String,
@@ -55,7 +56,10 @@ impl OrderbookState {
     /// Notify subscribers of orderbook change
     fn notify(&self, event: OrderbookUpdateEvent) {
         if let Some(ref tx) = self.broadcast_tx {
-            let _ = tx.send(event);
+            let res = tx.send(event);
+            if res.is_err() {
+                println!("No subscribers for orderbook updates");
+            }
         }
     }
 
@@ -229,6 +233,7 @@ pub async fn process_order_place(
 }
 
 pub fn get_orderbook_snapshot(state: &OrderbookState) -> serde_json::Value {
+    println!("Generating orderbook snapshot from state: {:?}", state);
     let bids: Vec<_> = state
         .bids
         .iter()
@@ -294,6 +299,8 @@ pub fn get_orderbook_snapshot(state: &OrderbookState) -> serde_json::Value {
             }
         });
 
+    println!("bids: {:?}", bids);
+    println!("asks: {:?}", asks);
     serde_json::json!({
         "bids": bids,
         "asks": asks,

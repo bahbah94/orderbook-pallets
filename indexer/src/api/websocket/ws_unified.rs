@@ -151,15 +151,19 @@ async fn handle_unified_socket(
                         // Orderbook changed, send snapshot
                         let ob = orderbook.lock().await;
                         let snapshot = get_orderbook_snapshot(&ob);
+                        println!("Orderbook snapshot: {:?}", snapshot);
 
                         let bids: Vec<PriceLevel> = if let Some(arr) = snapshot.get("bids").and_then(|v| v.as_array()) {
                             arr.iter()
                                 .filter_map(|level| {
-                                    Some(PriceLevel {
+                                    println!("Processing bid level: {:?}", level);
+                                    let pl = PriceLevel {
                                         price: level.get(0)?.as_str()?.to_string(),
                                         quantity: level.get(1)?.as_str()?.to_string(),
                                         order_count: level.get(2)?.as_u64()? as usize,
-                                    })
+                                    };
+                                    println!("Created PriceLevel: {:?}", pl);
+                                    Some(pl)
                                 })
                                 .collect()
                         } else {
@@ -169,11 +173,14 @@ async fn handle_unified_socket(
                         let asks: Vec<PriceLevel> = if let Some(arr) = snapshot.get("asks").and_then(|v| v.as_array()) {
                             arr.iter()
                                 .filter_map(|level| {
-                                    Some(PriceLevel {
+                                    println!("Processing ask level: {:?}", level);
+                                    let pl = PriceLevel {
                                         price: level.get(0)?.as_str()?.to_string(),
                                         quantity: level.get(1)?.as_str()?.to_string(),
                                         order_count: level.get(2)?.as_u64()? as usize,
-                                    })
+                                    };
+                                    println!("Created PriceLevel: {:?}", pl);
+                                    Some(pl)
                                 })
                                 .collect()
                         } else {
@@ -181,6 +188,7 @@ async fn handle_unified_socket(
                         };
 
                         let message = MarketDataMessage::orderbook(symbol_filter.clone(), bids, asks);
+                        println!("Sending orderbook update: {:?}", message);
                         if let Ok(json) = serde_json::to_string(&message) {
                             if sender.send(Message::Text(json.into())).await.is_err() {
                                 println!("❌ Failed to send orderbook update");

@@ -48,6 +48,8 @@ pub struct StatusMessage {
 
 impl MarketDataMessage {
     pub fn orderbook(symbol: String, bids: Vec<PriceLevel>, asks: Vec<PriceLevel>) -> Self {
+        println!("bids: {:?}", bids);
+        println!("asks: {:?}", asks);
         MarketDataMessage::Orderbook(OrderbookUpdate {
             symbol,
             bids,

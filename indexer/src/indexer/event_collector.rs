@@ -1,4 +1,3 @@
-use std::result;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
@@ -10,6 +9,7 @@ use sqlx::PgPool;
 use subxt::ext::scale_value::{Composite, Primitive, Value};
 use subxt::{OnlineClient, PolkadotConfig};
 use tracing::{debug, info};
+const SYMBOL: &str = "ETH/USDC";
 
 pub async fn start(
     node_url: &str,
@@ -88,7 +88,8 @@ pub async fn start(
                                 status: "Open".to_string(),
                             };
                             state.add_order(order);
-                            info!("✅ Order #{} added to state", data.order_id);
+                            println!("✅ Order #{} added to state", data.order_id);
+                            println!("orderbook state: {:?}", *state);
                         }
                         Err(e) => println!("❌ Failed to parse orderplaced: {}", e),
                     }
@@ -192,8 +193,8 @@ async fn parse_and_insert_trade(
 
     sqlx::query(
         "INSERT INTO trades
-        (trade_id, block_number,buy_order_id,sell_order_id,buyer,seller,price,quantity,value)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+        (trade_id, block_number,buy_order_id,sell_order_id,buyer,seller,price,quantity,value,symbol)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
     )
     .bind(trade_id as i64)
     .bind(block_number as i64)
@@ -204,6 +205,7 @@ async fn parse_and_insert_trade(
     .bind(price as i64)
     .bind(quantity as i64)
     .bind(value as i64)
+    .bind(SYMBOL)
     .execute(pool)
     .await?;
 
@@ -211,7 +213,6 @@ async fn parse_and_insert_trade(
 
     // Update candles and broadcast to websocket subscribers
     // TODO: Extract symbol from event instead of hardcoding
-    const SYMBOL: &str = "ETH/USDC";
     let timestamp_ms = chrono::Utc::now().timestamp_millis();
     candle_agg.process_trade(SYMBOL, price, quantity, timestamp_ms)?;
 

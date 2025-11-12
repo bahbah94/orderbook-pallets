@@ -31,7 +31,7 @@ pub async fn run_server(
             "/api/orderbook",
             get(handlers::orderbook_hand::get_orderbook),
         )
-        .route("/api/order/:id", get(handlers::orderbook_hand::get_order))
+        // .route("/api/order/:id", get(handlers::orderbook_hand::get_order))
         //add the udf stuff
         .nest("/udf", handlers::udf::udf_routes().await)
         //health stuff
