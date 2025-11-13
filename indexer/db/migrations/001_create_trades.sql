@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS trades (
 
     block_number BIGINT NOT NULL,
 
-    buyer VARCHAR(255) NOT NULL,
-    seller VARCHAR(255) NOT NULL,
+    buyer TEXT NOT NULL,
+    seller TEXT NOT NULL,
 
     buy_order_id BIGINT NOT NULL,
     sell_order_id BIGINT NOT NULL,
@@ -15,10 +15,10 @@ CREATE TABLE IF NOT EXISTS trades (
     price NUMERIC(38, 0) NOT NULL,  -- u128 from on-chain
     quantity NUMERIC(38, 0) NOT NULL,  -- u128 from on-chain
     value NUMERIC(38, 0) NOT NULL,  -- price * quantity
-    symbol VARCHAR(50) NOT NULL,  -- Trading pair symbol (e.g., "DOT/USDT")
+    symbol TEXT NOT NULL,  -- Trading pair symbol (e.g., "DOT/USDT")
 
     -- Metadata
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     -- Composite primary key including the partitioning column
     PRIMARY KEY (trade_id, created_at)

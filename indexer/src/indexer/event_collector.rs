@@ -4,12 +4,12 @@ use tokio::sync::Mutex;
 use crate::indexer::candle_aggregator::CandleAggregator;
 use crate::indexer::order_extractor::*;
 use crate::indexer::orderbook_reducer::{OrderInfo, OrderbookState};
+use crate::indexer::runtime;
+use crate::indexer::trade_mapper::{process_trade, TradeProcessingContext};
 use anyhow::Result;
 use sqlx::PgPool;
-use subxt::ext::scale_value::{Composite, Primitive, Value};
 use subxt::{OnlineClient, PolkadotConfig};
 use tracing::{debug, info};
-const SYMBOL: &str = "ETH/USDC";
 
 pub async fn start(
     node_url: &str,
@@ -41,31 +41,36 @@ pub async fn start(
             let event_name = evt.variant_name();
             let event_values = evt.field_values()?;
 
-            //println!("        {}_{}", pallet_name, event_name);
-            //println!("          {}", event_values);
-
             // Route to appropriate handler
             match (pallet_name, event_name) {
                 ("Orderbook", "TradeExecuted") => {
                     println!("🎯 TradeExecuted event detected!");
-                    //println!("Raw event_values: {:?}", event_values);
 
-                    // wrapping it for completeness and consistency
-                    let value = Value {
-                        value: subxt::ext::scale_value::ValueDef::Composite(event_values.clone()),
-                        context: 0,
-                    };
-                    //println!("Event values: {:#?}", event_values);
-                    let mut candle_agg = candle_aggregator.lock().await;
-                    match parse_and_insert_trade(&pool, &mut candle_agg, block_number, &value).await
-                    {
-                        Ok(_) => {
-                            println!("✅ Trade inserted successfully!");
-                            info!("✅ Trade executed in block {}", block_number);
+                    // Decode event using generated types
+                    match evt.as_event::<runtime::TradeExecuted>() {
+                        Ok(Some(trade_event)) => {
+                            // Create context and process trade
+                            let mut candle_agg = candle_aggregator.lock().await;
+                            let mut ctx = TradeProcessingContext {
+                                pool: &pool,
+                                candle_agg: &mut candle_agg,
+                            };
+
+                            match process_trade(&mut ctx, block_number, &trade_event).await {
+                                Ok(_) => {
+                                    println!("✅ Trade inserted successfully!");
+                                    info!("✅ Trade executed in block {}", block_number);
+                                }
+                                Err(e) => {
+                                    debug!("❌ Failed to process trade: {}", e);
+                                }
+                            }
+                        }
+                        Ok(None) => {
+                            debug!("❌ TradeExecuted event is None (filtered?)");
                         }
                         Err(e) => {
-                            println!("❌ FAILED TO INSERT TRADE: {}", e); // ← THIS WILL SHOW THE ERROR
-                            debug!("❌ Failed to parse trade: {}", e);
+                            debug!("❌ Failed to decode trade event: {}", e);
                         }
                     }
                 }
@@ -169,107 +174,3 @@ pub async fn start(
 
     Ok(())
 }
-
-async fn parse_and_insert_trade(
-    pool: &PgPool,
-    candle_agg: &mut CandleAggregator,
-    block_number: u32,
-    event_values: &Value<u32>,
-) -> Result<()> {
-    let trade_id = extract_u128_by_name(event_values, "trade_id")?;
-    let buy_order_id = extract_u128_by_name(event_values, "buy_order_id")?;
-    let sell_order_id = extract_u128_by_name(event_values, "sell_order_id")?;
-    let buyer = extract_account_by_name(event_values, "buyer")?;
-    let seller = extract_account_by_name(event_values, "seller")?;
-    let price = extract_u128_by_name(event_values, "price")?;
-    let quantity = extract_u128_by_name(event_values, "quantity")?;
-
-    let value = price.saturating_mul(quantity);
-
-    info!(
-        "🎯 TradeExecuted parsed: trade_id={}, buy={}, sell={}, price={}, qty={}, value={}",
-        trade_id, buy_order_id, sell_order_id, price, quantity, value
-    );
-
-    sqlx::query(
-        "INSERT INTO trades
-        (trade_id, block_number,buy_order_id,sell_order_id,buyer,seller,price,quantity,value,symbol)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-    )
-    .bind(trade_id as i64)
-    .bind(block_number as i64)
-    .bind(buy_order_id as i64)
-    .bind(sell_order_id as i64)
-    .bind(buyer.clone())
-    .bind(seller.clone())
-    .bind(price as i64)
-    .bind(quantity as i64)
-    .bind(value as i64)
-    .bind(SYMBOL)
-    .execute(pool)
-    .await?;
-
-    info!("✅ Trade #{} inserted into database!", trade_id);
-
-    // Update candles and broadcast to websocket subscribers
-    // TODO: Extract symbol from event instead of hardcoding
-    let timestamp_ms = chrono::Utc::now().timestamp_millis();
-    candle_agg.process_trade(SYMBOL, price, quantity, timestamp_ms)?;
-
-    Ok(())
-}
-
-/// helper functions to extract events parsed
-fn extract_u128_by_name(value: &Value<u32>, field_name: &str) -> Result<u128> {
-    if let subxt::ext::scale_value::ValueDef::Composite(Composite::Named(fields)) = &value.value {
-        for (name, field_value) in fields {
-            if name == field_name {
-                if let subxt::ext::scale_value::ValueDef::Primitive(Primitive::U128(val)) =
-                    &field_value.value
-                {
-                    return Ok(*val);
-                }
-            }
-        }
-    }
-    Err(anyhow::anyhow!(
-        "Field {} not found or not a u128",
-        field_name
-    ))
-}
-
-fn extract_account_by_name(value: &Value<u32>, field_name: &str) -> Result<String> {
-    if let subxt::ext::scale_value::ValueDef::Composite(Composite::Named(fields)) = &value.value {
-        for (name, field_value) in fields {
-            if name == field_name {
-                // Account is a composite of 32 u128 values
-                if let subxt::ext::scale_value::ValueDef::Composite(Composite::Unnamed(bytes)) =
-                    &field_value.value
-                {
-                    if let subxt::ext::scale_value::ValueDef::Composite(Composite::Unnamed(
-                        inner_bytes,
-                    )) = &bytes[0].value
-                    {
-                        let mut account_bytes = Vec::new();
-                        for byte_val in inner_bytes {
-                            if let subxt::ext::scale_value::ValueDef::Primitive(
-                                subxt::ext::scale_value::Primitive::U128(b),
-                            ) = &byte_val.value
-                            {
-                                account_bytes.push(*b as u8);
-                            }
-                        }
-                        // Return as hex string for storage
-                        return Ok(format!("0x{}", hex::encode(&account_bytes)));
-                    }
-                }
-            }
-        }
-    }
-    Err(anyhow::anyhow!(
-        "Field {} not found or invalid account",
-        field_name
-    ))
-}
-
-// Please refer to event_type_ref for understanding these reference types

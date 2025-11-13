@@ -6,9 +6,9 @@ use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::sync::Arc;
-use subxt::{OnlineClient, PolkadotConfig};
+use subxt::ext::sp_core::{crypto::Ss58Codec, sr25519::Pair, Pair as PairTrait};
 use subxt::tx::PairSigner;
-use subxt::ext::sp_core::{sr25519::Pair, Pair as PairTrait, crypto::Ss58Codec};
+use subxt::{OnlineClient, PolkadotConfig};
 use tokio::sync::{Mutex, Semaphore};
 use tracing::{info, warn};
 
@@ -50,9 +50,9 @@ use polkadot::runtime_types::pallet_orderbook::types::{OrderSide, OrderType};
 
 struct TradeBot {
     client: OnlineClient<PolkadotConfig>,
-    accounts: Vec<(String, Pair)>,  // (address, keypair)
-    account_locks: HashMap<String, Arc<Mutex<()>>>,  // Per-account locks
-    worker_pool: Arc<Semaphore>,  // Limits concurrent workers
+    accounts: Vec<(String, Pair)>, // (address, keypair)
+    account_locks: HashMap<String, Arc<Mutex<()>>>, // Per-account locks
+    worker_pool: Arc<Semaphore>,   // Limits concurrent workers
 }
 
 impl TradeBot {
@@ -87,12 +87,14 @@ impl TradeBot {
 
     fn generate_accounts(num: usize) -> Result<Vec<(String, Pair)>> {
         // Dev account URIs (well-known substrate test accounts)
-        let dev_uris = ["//Alice",
+        let dev_uris = [
+            "//Alice",
             "//Bob",
             "//Charlie",
             "//Dave",
             "//Eve",
-            "//Ferdie"];
+            "//Ferdie",
+        ];
 
         let mut accounts = Vec::new();
         for i in 0..num {
@@ -112,22 +114,20 @@ impl TradeBot {
 
     fn map_trader_to_account(&self, trader: &str) -> &(String, Pair) {
         // Hash the trader string to deterministically map to an account
-        let hash: u64 = trader.bytes().fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
+        let hash: u64 = trader
+            .bytes()
+            .fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
         let index = (hash as usize) % self.accounts.len();
         &self.accounts[index]
     }
 
-    async fn place_order(
-        &self,
-        trader: &str,
-        side: &str,
-        price: f64,
-        quantity: f64,
-    ) -> Result<()> {
+    async fn place_order(&self, trader: &str, side: &str, price: f64, quantity: f64) -> Result<()> {
         let (address, pair) = self.map_trader_to_account(trader);
 
         // Get the lock for this specific account (already created in new())
-        let account_lock = self.account_locks.get(address)
+        let account_lock = self
+            .account_locks
+            .get(address)
             .expect("Account lock should exist")
             .clone();
 
@@ -152,12 +152,16 @@ impl TradeBot {
         let signer = PairSigner::new(pair.clone());
 
         // Build the extrinsic with correct parameter order: side, price, quantity, order_type
-        let tx = polkadot::tx()
-            .orderbook()
-            .place_order(order_side, price_u128, quantity_u128, order_type);
+        let tx = polkadot::tx().orderbook().place_order(
+            order_side,
+            price_u128,
+            quantity_u128,
+            order_type,
+        );
 
         // Wait for confirmation to avoid nonce issues
-        match self.client
+        match self
+            .client
             .tx()
             .sign_and_submit_then_watch_default(&tx, &signer)
             .await
@@ -172,14 +176,20 @@ impl TradeBot {
                         Ok(())
                     }
                     Err(e) => {
-                        warn!("⚠️  Order failed (finalization): {} {} @ {} - {}", address, side, price, e);
+                        warn!(
+                            "⚠️  Order failed (finalization): {} {} @ {} - {}",
+                            address, side, price, e
+                        );
                         // Don't return error, just log and continue
                         Ok(())
                     }
                 }
             }
             Err(e) => {
-                warn!("⚠️  Order failed (submission): {} {} @ {} - {}", address, side, price, e);
+                warn!(
+                    "⚠️  Order failed (submission): {} {} @ {} - {}",
+                    address, side, price, e
+                );
                 // Don't return error, just log and continue
                 Ok(())
             }
@@ -189,7 +199,7 @@ impl TradeBot {
     async fn cancel_order(
         &self,
         trader: &str,
-        _order_id: &str,  // We don't have real order IDs from the chain
+        _order_id: &str, // We don't have real order IDs from the chain
     ) -> Result<()> {
         let (address, _pair) = self.map_trader_to_account(trader);
 
@@ -212,56 +222,66 @@ impl TradeBot {
             let signer = PairSigner::new(pair.clone());
 
             // Fund with ETH (asset_id = 0)
-            let deposit_eth = polkadot::tx()
-                .assets()
-                .deposit(0, fund_amount);
+            let deposit_eth = polkadot::tx().assets().deposit(0, fund_amount);
 
-            match self.client
+            match self
+                .client
                 .tx()
                 .sign_and_submit_then_watch_default(&deposit_eth, &signer)
                 .await
             {
-                Ok(progress) => {
-                    match progress.wait_for_finalized_success().await {
-                        Ok(_) => {
-                            info!("✅ Funded {} with {} ETH", address, fund_amount / 1_000_000);
-                        }
-                        Err(e) => {
-                            warn!("⚠️  ETH deposit failed (finalization) for {}: {}", address, e);
-                            return Err(anyhow::anyhow!("ETH deposit failed for {}", address));
-                        }
+                Ok(progress) => match progress.wait_for_finalized_success().await {
+                    Ok(_) => {
+                        info!("✅ Funded {} with {} ETH", address, fund_amount / 1_000_000);
                     }
-                }
+                    Err(e) => {
+                        warn!(
+                            "⚠️  ETH deposit failed (finalization) for {}: {}",
+                            address, e
+                        );
+                        return Err(anyhow::anyhow!("ETH deposit failed for {}", address));
+                    }
+                },
                 Err(e) => {
                     warn!("⚠️  Failed to submit ETH deposit for {}: {}", address, e);
-                    return Err(anyhow::anyhow!("Failed to submit ETH deposit for {}", address));
+                    return Err(anyhow::anyhow!(
+                        "Failed to submit ETH deposit for {}",
+                        address
+                    ));
                 }
             }
 
             // Fund with USDC (asset_id = 1)
-            let deposit_usdc = polkadot::tx()
-                .assets()
-                .deposit(1, fund_amount);
+            let deposit_usdc = polkadot::tx().assets().deposit(1, fund_amount);
 
-            match self.client
+            match self
+                .client
                 .tx()
                 .sign_and_submit_then_watch_default(&deposit_usdc, &signer)
                 .await
             {
-                Ok(progress) => {
-                    match progress.wait_for_finalized_success().await {
-                        Ok(_) => {
-                            info!("✅ Funded {} with {} USDC", address, fund_amount / 1_000_000);
-                        }
-                        Err(e) => {
-                            warn!("⚠️  USDC deposit failed (finalization) for {}: {}", address, e);
-                            return Err(anyhow::anyhow!("USDC deposit failed for {}", address));
-                        }
+                Ok(progress) => match progress.wait_for_finalized_success().await {
+                    Ok(_) => {
+                        info!(
+                            "✅ Funded {} with {} USDC",
+                            address,
+                            fund_amount / 1_000_000
+                        );
                     }
-                }
+                    Err(e) => {
+                        warn!(
+                            "⚠️  USDC deposit failed (finalization) for {}: {}",
+                            address, e
+                        );
+                        return Err(anyhow::anyhow!("USDC deposit failed for {}", address));
+                    }
+                },
                 Err(e) => {
                     warn!("⚠️  Failed to submit USDC deposit for {}: {}", address, e);
-                    return Err(anyhow::anyhow!("Failed to submit USDC deposit for {}", address));
+                    return Err(anyhow::anyhow!(
+                        "Failed to submit USDC deposit for {}",
+                        address
+                    ));
                 }
             }
         }
@@ -276,12 +296,8 @@ impl TradeBot {
                 let params: PlaceOrderParams = serde_json::from_value(tx.params.clone())
                     .context("Failed to parse place_order params")?;
 
-                self.place_order(
-                    &tx.trader,
-                    &params.side,
-                    params.price,
-                    params.quantity,
-                ).await?;
+                self.place_order(&tx.trader, &params.side, params.price, params.quantity)
+                    .await?;
             }
             "cancel_order" => {
                 let params: CancelOrderParams = serde_json::from_value(tx.params.clone())
@@ -303,8 +319,14 @@ impl TradeBot {
             .flat_map(|block| block.transactions)
             .collect();
 
-        info!("🚀 Starting transaction replay with {} transactions", all_txs.len());
-        info!("👷 Worker pool size: {}", self.worker_pool.available_permits());
+        info!(
+            "🚀 Starting transaction replay with {} transactions",
+            all_txs.len()
+        );
+        info!(
+            "👷 Worker pool size: {}",
+            self.worker_pool.available_permits()
+        );
 
         let mut handles = Vec::new();
 
@@ -320,7 +342,7 @@ impl TradeBot {
 
                 // Log result
                 match &result {
-                    Ok(_) => {},
+                    Ok(_) => {}
                     Err(e) => {
                         warn!("Failed to process tx {}: {}", tx.tx_id, e);
                     }
@@ -348,7 +370,10 @@ impl TradeBot {
             }
         }
 
-        info!("✅ Completed transaction replay: {} submitted, {} failed", submitted, failed);
+        info!(
+            "✅ Completed transaction replay: {} submitted, {} failed",
+            submitted, failed
+        );
         Ok(())
     }
 }
@@ -356,8 +381,8 @@ impl TradeBot {
 fn load_blocks(file_path: &str) -> Result<Vec<Block>> {
     info!("📂 Loading blocks from: {}", file_path);
 
-    let file = File::open(file_path)
-        .with_context(|| format!("Failed to open file: {}", file_path))?;
+    let file =
+        File::open(file_path).with_context(|| format!("Failed to open file: {}", file_path))?;
 
     let reader = BufReader::new(file);
     let mut blocks = Vec::new();
@@ -388,7 +413,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
         )
         .with_target(false)
         .init();
