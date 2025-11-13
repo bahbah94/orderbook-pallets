@@ -1,6 +1,6 @@
+use crate as pallet_assets;
 use frame_support::derive_impl;
 use sp_runtime::BuildStorage;
-use crate as pallet_assets;
 
 type Block = frame_system::mocking::MockBlock<Test>;
 
@@ -16,7 +16,7 @@ mod runtime {
         RuntimeHoldReason,
         RuntimeSlashReason,
         RuntimeLockId,
-        RuntimeTask,
+        RuntimeTask
     )]
     pub struct Test;
 
@@ -28,11 +28,11 @@ mod runtime {
 }
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
-impl frame_system::Config for Test{
+impl frame_system::Config for Test {
     type Block = Block;
 }
 
-impl pallet_assets::Config for Test{
+impl pallet_assets::Config for Test {
     type RuntimeEvent = RuntimeEvent;
     type WeightInfo = pallet_assets::weights::SubstrateWeight<Test>;
 }
