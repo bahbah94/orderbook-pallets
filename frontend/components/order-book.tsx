@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useOrderBook } from "@/hooks/use-order-book"
+import { useIndexerOrderbook } from "@/hooks/use-indexer-orderbook"
 import { useTrades } from "@/hooks/use-trades"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { env } from "@/lib/env"
 
 function OrderBookRow({
   price,
@@ -73,12 +75,22 @@ function OrderBookRow({
   )
 }
 
-export function OrderBook() {
+interface OrderBookProps {
+  useIndexer?: boolean
+  symbol?: string
+}
+
+export function OrderBook({ useIndexer = true, symbol = "ETH/USDC" }: OrderBookProps = {}) {
   const [activeTab, setActiveTab] = useState<"orderbook" | "trades">("orderbook")
   const [priceGrouping, setPriceGrouping] = useState<number>(0.01)
 
-  const { asks, bids, spread, spreadPercent, maxSize } = useOrderBook()
+  // Use indexer data if available, otherwise fall back to mock data
+  const indexerData = useIndexer ? useIndexerOrderbook(env.INDEXER_WS_URL, symbol) : null
+  const mockData = useOrderBook()
   const trades = useTrades()
+
+  const orderBookData = indexerData || mockData
+  const { asks, bids, spread, spreadPercent, maxSize } = orderBookData
 
   return (
     <div className="flex h-full flex-col bg-card">

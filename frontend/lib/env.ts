@@ -6,8 +6,11 @@ import { z } from "zod"
  * Client-side variables (NEXT_PUBLIC_ prefix) are available on both server and client
  */
 const envSchema = z.object({
-  APP_ENV: z.enum(['dev', 'prod']).default('dev'),
-  SERVER_URL: z.string().url("SERVER_URL must be a valid URL"),
+  NEXT_PUBLIC_APP_ENV: z.enum(['dev', 'prod']).default('dev'),
+  NEXT_PUBLIC_SERVER_URL: z.string().url("SERVER_URL must be a valid URL"),
+  NEXT_PUBLIC_INDEXER_URL: z.string().url("INDEXER_URL must be a valid URL"),
+  NEXT_PUBLIC_INDEXER_WS_URL: z.string().url("INDEXER_WS_URL must be a valid WebSocket URL"),
+  // NEXT_PUBLIC_NODE_WS_URL: z.string().url("NODE_WS_URL must be a valid WebSocket URL"),
 })
 
 /**
@@ -21,8 +24,11 @@ export type Env = z.infer<typeof envSchema>
  */
 function validateEnv(): Env {
   const env = {
-    APP_ENV: process.env.APP_ENV,
-    SERVER_URL: process.env.SERVER_URL,
+    NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
+    NEXT_PUBLIC_SERVER_URL: process.env.NEXT_PUBLIC_SERVER_URL,
+    NEXT_PUBLIC_INDEXER_URL: process.env.NEXT_PUBLIC_INDEXER_URL,
+    NEXT_PUBLIC_INDEXER_WS_URL: process.env.NEXT_PUBLIC_INDEXER_WS_URL,
+    // NEXT_PUBLIC_NODE_WS_URL: process.env.NEXT_PUBLIC_NODE_WS_URL,
   }
 
   try {
@@ -44,7 +50,18 @@ function validateEnv(): Env {
 }
 
 /**
- * Validated environment variables
+ * Validated environment variables (raw with NEXT_PUBLIC_ prefix)
  * Use this throughout your application instead of process.env
  */
-export const env = validateEnv()
+const rawEnv = validateEnv()
+
+/**
+ * Convenience exports with cleaner names
+ * These are the actual values you should use in your app
+ */
+export const env = {
+  APP_ENV: rawEnv.NEXT_PUBLIC_APP_ENV,
+  SERVER_URL: rawEnv.NEXT_PUBLIC_SERVER_URL,
+  INDEXER_URL: rawEnv.NEXT_PUBLIC_INDEXER_URL,
+  INDEXER_WS_URL: rawEnv.NEXT_PUBLIC_INDEXER_WS_URL,
+} as const
