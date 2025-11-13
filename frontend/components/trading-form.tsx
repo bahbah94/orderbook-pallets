@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
 import { useToast } from "@/hooks/use-toast"
+import { Z_VERSION_ERROR } from "zlib"
+import { FundDialog } from "./ui/depositwithdraw"
 
 interface TradingFormProps {
   selectedPair: string
@@ -20,6 +22,7 @@ export function TradingForm({ selectedPair }: TradingFormProps) {
   const [buyPercentage, setBuyPercentage] = useState([0])
   const [sellPercentage, setSellPercentage] = useState([0])
   const { toast } = useToast()
+
 
   const handleBuy = () => {
     toast({
@@ -47,6 +50,8 @@ export function TradingForm({ selectedPair }: TradingFormProps) {
         <div className="text-base font-semibold text-card-foreground">Trade</div>
       </div>
       <div className="flex-1 overflow-y-auto px-4 py-4">
+        {/** withdraw and deposit flow */}
+        <FundDialog />
         <Tabs defaultValue="buy" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger
