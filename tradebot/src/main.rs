@@ -87,14 +87,12 @@ impl TradeBot {
 
     fn generate_accounts(num: usize) -> Result<Vec<(String, Pair)>> {
         // Dev account URIs (well-known substrate test accounts)
-        let dev_uris = vec![
-            "//Alice",
+        let dev_uris = ["//Alice",
             "//Bob",
             "//Charlie",
             "//Dave",
             "//Eve",
-            "//Ferdie",
-        ];
+            "//Ferdie"];
 
         let mut accounts = Vec::new();
         for i in 0..num {

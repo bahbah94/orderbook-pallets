@@ -3,7 +3,7 @@ use axum::{
     extract::{Query, State},
     response::{IntoResponse, Json},
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::json;
 use sqlx::PgPool;
 use std::sync::Arc;

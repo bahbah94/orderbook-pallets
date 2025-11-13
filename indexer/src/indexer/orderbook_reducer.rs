@@ -90,7 +90,7 @@ impl OrderbookState {
                 snapshot.summary.total_ask_levels,
                 snapshot.summary.total_orders
             );
-            if let Err(_) = tx.send(snapshot) {
+            if tx.send(snapshot).is_err() {
                 tracing::debug!("No subscribers for orderbook updates");
             }
         }
@@ -172,13 +172,13 @@ impl OrderbookState {
             "Buy" => {
                 self.bids
                     .entry(price)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(order_id);
             }
             "Sell" => {
                 self.asks
                     .entry(price)
-                    .or_insert_with(Vec::new)
+                    .or_default()
                     .push(order_id);
             }
             _ => {}
@@ -268,7 +268,7 @@ impl OrderbookState {
 
     /// Get best bid/ask spread
     pub fn get_spread(&self) -> Option<(u128, u128)> {
-        let best_bid = self.bids.keys().rev().next()?;
+        let best_bid = self.bids.keys().next_back()?;
         let best_ask = self.asks.keys().next()?;
         Some((*best_bid, *best_ask))
     }

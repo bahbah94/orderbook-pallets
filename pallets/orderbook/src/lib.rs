@@ -465,12 +465,12 @@ pub mod pallet {
             let _ = PendingAsks::<T>::clear(u32::MAX, None);
 
             //remove the cancellation storage
-            let _ = PendingCancellations::<T>::kill();
+            PendingCancellations::<T>::kill();
 
             //EMIT event about complete trades
             Self::deposit_event(Event::MatchingCompleted {
                 total_trades: all_trades.len() as u32,
-                total_volume: total_volume,
+                total_volume,
             });
 
             //Ok(())
@@ -545,11 +545,11 @@ pub mod pallet {
             NextOrderId::<T>::put(order_id + 1);
 
             Self::deposit_event(Event::OrderPlaced {
-                order_id: order_id,
-                side: side,
-                price: price,
+                order_id,
+                side,
+                price,
                 asset_id: if side == OrderSide::Buy { USDT } else { ETH },
-                quantity: quantity,
+                quantity,
             });
 
             Ok(())
@@ -576,7 +576,7 @@ pub mod pallet {
 
             Self::deposit_event(Event::CancellationRequested {
                 order_id: order.order_id,
-                trader: trader,
+                trader,
             });
 
             Ok(())

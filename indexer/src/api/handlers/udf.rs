@@ -1,12 +1,11 @@
 use crate::indexer::orderbook_reducer::OrderbookState;
 use axum::{
     extract::{Query, State},
-    http::StatusCode,
     response::{IntoResponse, Json},
     routing::get,
     Router,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json::{json, Value};
 use sqlx::PgPool;
 use std::sync::Arc;
