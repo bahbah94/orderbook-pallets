@@ -57,7 +57,7 @@ struct TradeBot {
 
 impl TradeBot {
     async fn new(node_url: &str, num_accounts: usize, pool_size: usize) -> Result<Self> {
-        let client = OnlineClient::<PolkadotConfig>::from_url(node_url)
+        let client = OnlineClient::<PolkadotConfig>::from_insecure_url(node_url)
             .await
             .context("Failed to connect to node")?;
 

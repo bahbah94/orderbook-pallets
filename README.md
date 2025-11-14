@@ -12,6 +12,18 @@ This project implements a fully functional orderbook-based DEX on Substrate, fea
 - **Custom Assets Pallet**: Manages USDT and ETH balances with lock/unlock functionality
 - **Atomic Settlement**: All trades are settled atomically with proper fund transfers
 
+## Quick Start
+Pull mock data:
+```bash
+cd tradebot
+git lfs pull
+```
+
+From root directory:
+```bash
+docker compose up --build
+```
+
 ## Architecture
 
 ### Two-Phase Design
