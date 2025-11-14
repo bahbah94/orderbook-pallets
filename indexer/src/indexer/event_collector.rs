@@ -17,7 +17,7 @@ pub async fn start(
     orderbook_state: Arc<Mutex<OrderbookState>>,
     candle_aggregator: Arc<Mutex<CandleAggregator>>,
 ) -> Result<()> {
-    let api = OnlineClient::<PolkadotConfig>::from_url(node_url).await?;
+    let api = OnlineClient::<PolkadotConfig>::from_insecure_url(node_url).await?;
 
     info!("✅ Connected to chain: {:?}", api.runtime_version());
 
