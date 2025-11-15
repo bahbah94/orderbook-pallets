@@ -71,8 +71,7 @@ pub async fn process_trade(
     sqlx::query(
         "INSERT INTO trades
         (trade_id, block_number, buy_order_id, sell_order_id, buyer, seller, price, quantity, value, symbol)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        ON CONFLICT (trade_id) DO NOTHING",
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
     )
     .bind(trade.trade_id as i64)
     .bind(trade.block_number as i64)

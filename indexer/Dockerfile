@@ -16,4 +16,4 @@ COPY --from=builder /workspace/target/release/indexer .
 ENV INDEXER_PORT=8081
 EXPOSE ${INDEXER_PORT}
 
-CMD ["./orbexindexer"]
+CMD ["./orbex-indexer"]

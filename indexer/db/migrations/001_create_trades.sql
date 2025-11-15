@@ -36,5 +36,3 @@ CREATE INDEX IF NOT EXISTS idx_trades_seller ON trades(seller);
 
 CREATE INDEX IF NOT EXISTS idx_trades_buy_order_id ON trades(buy_order_id);
 CREATE INDEX IF NOT EXISTS idx_trades_sell_order_id ON trades(sell_order_id);
-
-
