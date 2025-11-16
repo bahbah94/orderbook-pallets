@@ -132,7 +132,7 @@ export default function TestIndexerPage() {
           {/* Chart */}
           <div className="bg-card rounded-lg border overflow-hidden">
             <div className="p-4 border-b">
-              <h2 className="text-lg font-semibold">IndexerChart Component</h2>
+              <h2 className="text-lg font-semibold">Candle Stick Chart</h2>
               <p className="text-sm text-muted-foreground">Real-time OHLCV data</p>
             </div>
             <div className="h-[400px]">
@@ -143,7 +143,7 @@ export default function TestIndexerPage() {
           {/* OrderBook */}
           <div className="bg-card rounded-lg border overflow-hidden">
             <div className="p-4 border-b">
-              <h2 className="text-lg font-semibold">OrderBook Component</h2>
+              <h2 className="text-lg font-semibold">OrderBook</h2>
               <p className="text-sm text-muted-foreground">Real-time orderbook</p>
             </div>
             <div className="h-[400px]">
@@ -156,7 +156,7 @@ export default function TestIndexerPage() {
         <div className="bg-card p-6 rounded-lg border">
           <h2 className="text-xl font-semibold mb-4">Instructions</h2>
           <div className="space-y-2 text-sm text-muted-foreground">
-            <p>1. Make sure the indexer is running: <code className="text-foreground">cargo run --release --bin orderbook-indexer</code></p>
+            <p>1. Make sure the indexer is running: <code className="text-foreground">cargo run --release --bin orbex-indexer</code></p>
             <p>2. Verify health endpoint: <code className="text-foreground">curl {env.INDEXER_URL}/health</code></p>
             <p>3. Check browser console for WebSocket connection logs</p>
             <p>4. If everything works, you should see:</p>

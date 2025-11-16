@@ -64,7 +64,7 @@ just db-setup
 5. Start the trade bot:
 
   ```bash
-  cargo run --release --bin orbex-trade-bot
+  cargo run --release --bin orbex-tradebot
   ```
 
 This launches the Substrate node, PostgreSQL with TimescaleDB, indexer, and the trade bot.

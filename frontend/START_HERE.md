@@ -8,7 +8,7 @@ The environment variables now work correctly with the `NEXT_PUBLIC_` prefix.
 
 ### 1. Start the Indexer (Port 3000)
 ```bash
-cargo run --release --bin orderbook-indexer
+cargo run --release --bin orbex-indexer
 ```
 
 ### 2. Start the Frontend (Port 4000)
