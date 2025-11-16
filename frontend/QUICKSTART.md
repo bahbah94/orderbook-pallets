@@ -54,8 +54,8 @@ This gives you:
 import { IndexerChart } from "@/components/indexer-chart"
 import { OrderBook } from "@/components/order-book"
 
-<IndexerChart symbol="ETH/USDC" interval="15m" />
-<OrderBook useIndexer={true} symbol="ETH/USDC" />
+<IndexerChart symbol="ETH/USDT" interval="15m" />
+<OrderBook useIndexer={true} symbol="ETH/USDT" />
 ```
 
 ## What's New
@@ -81,7 +81,7 @@ import { IndexerRestClient } from "@/lib/indexer/rest-client"
 
 const client = new IndexerRestClient(env.INDEXER_URL)
 const candles = await client.getCandles({
-  symbol: "ETH/USDC",
+  symbol: "ETH/USDT",
   start_time: Math.floor(Date.now() / 1000) - 86400,
   end_time: Math.floor(Date.now() / 1000),
   interval: "15m"
@@ -95,7 +95,7 @@ import { IndexerWebSocketClient } from "@/lib/indexer/websocket-client"
 const ws = new IndexerWebSocketClient(env.INDEXER_WS_URL, {
   orderbook: true,
   ohlcv: true,
-  symbol: "ETH/USDC",
+  symbol: "ETH/USDT",
   timeframes: ["1m", "5m", "15m"]
 })
 
@@ -137,12 +137,12 @@ frontend/
 
 2. **Test REST API**:
    ```bash
-   curl "http://localhost:3000/api/candles?symbol=ETH/USDC&start_time=1699000000&end_time=1699086400&interval=15m"
+   curl "http://localhost:3000/api/candles?symbol=ETH/USDT&start_time=1699000000&end_time=1699086400&interval=15m"
    ```
 
 3. **Test WebSocket** (in browser console):
    ```javascript
-   const ws = new WebSocket("ws://localhost:3000/ws/market?symbol=ETH/USDC")
+   const ws = new WebSocket("ws://localhost:3000/ws/market?symbol=ETH/USDT")
    ws.onmessage = (e) => console.log(JSON.parse(e.data))
    ```
 

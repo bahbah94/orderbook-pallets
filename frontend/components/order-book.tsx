@@ -80,7 +80,7 @@ interface OrderBookProps {
   symbol?: string
 }
 
-export function OrderBook({ useIndexer = true, symbol = "ETH/USDC" }: OrderBookProps = {}) {
+export function OrderBook({ useIndexer = true, symbol = "ETH/USDT" }: OrderBookProps = {}) {
   const [activeTab, setActiveTab] = useState<"orderbook" | "trades">("orderbook")
   const [priceGrouping, setPriceGrouping] = useState<number>(0.01)
 

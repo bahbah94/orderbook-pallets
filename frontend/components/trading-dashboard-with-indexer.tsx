@@ -13,12 +13,12 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Activity, TrendingUp, TrendingDown } from "lucide-react"
 
 export function TradingDashboardWithIndexer() {
-  const [selectedPair, setSelectedPair] = useState("ETH/USDC")
+  const [selectedPair, setSelectedPair] = useState("ETH/USDT")
   const [useIndexerChart, setUseIndexerChart] = useState(true)
   const [chartInterval, setChartInterval] = useState("15m")
 
   const stats = {
-    "ETH/USDC": {
+    "ETH/USDT": {
       price: "3,922.58",
       change: "+124.50",
       changePercent: "+3.28%",
@@ -29,7 +29,7 @@ export function TradingDashboardWithIndexer() {
     },
   }
 
-  const currentStats = stats[selectedPair as keyof typeof stats] || stats["ETH/USDC"]
+  const currentStats = stats[selectedPair as keyof typeof stats] || stats["ETH/USDT"]
 
   return (
     <div className="flex h-screen flex-col bg-background">
@@ -71,7 +71,7 @@ export function TradingDashboardWithIndexer() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="ETH/USDC">ETH/USDC</SelectItem>
+                        <SelectItem value="ETH/USDT">ETH/USDT</SelectItem>
                       </SelectContent>
                     </Select>
                     <div className="flex items-baseline gap-2">

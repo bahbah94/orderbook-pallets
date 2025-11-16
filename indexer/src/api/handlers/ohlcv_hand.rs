@@ -15,7 +15,7 @@ pub type AppState = (Arc<Mutex<OrderbookState>>, PgPool);
 
 #[derive(Debug, Deserialize)]
 pub struct CandleQuery {
-    /// Trading pair symbol (e.g., "ETH/USDC")
+    /// Trading pair symbol (e.g., "ETH/USDT")
     pub symbol: String,
     /// Start time in seconds (Unix timestamp)
     pub start_time: i64,
@@ -28,7 +28,7 @@ pub struct CandleQuery {
 /// Get historical OHLCV candles in Hyperliquid format
 ///
 /// Query parameters:
-/// - `symbol`: Trading pair (e.g., "ETH/USDC")
+/// - `symbol`: Trading pair (e.g., "ETH/USDT")
 /// - `start_time`: Start timestamp in SECONDS (Unix epoch)
 /// - `end_time`: End timestamp in SECONDS (Unix epoch)
 /// - `interval`: Time interval ("1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "1M")
@@ -45,7 +45,7 @@ pub struct CandleQuery {
 ///     "c": "2050.0",
 ///     "v": "15000.0",
 ///     "i": "1m",
-///     "s": "ETH/USDC",
+///     "s": "ETH/USDT",
 ///     "n": 42
 ///   }
 /// ]

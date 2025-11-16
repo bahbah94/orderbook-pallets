@@ -45,7 +45,7 @@ export class IndexerTradingViewDatafeed {
     this.wsClient = new IndexerWebSocketClient(indexerWsUrl, {
       orderbook: false,
       ohlcv: true,
-      symbol: "ETH/USDC",
+      symbol: "ETH/USDT",
       timeframes: ["1m", "5m", "15m", "30m", "1h", "4h", "1d"],
     })
 

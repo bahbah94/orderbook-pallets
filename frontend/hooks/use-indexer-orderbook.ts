@@ -78,7 +78,7 @@ function transformOrderbookData(update: OrderbookUpdate): OrderBookData {
 
 export function useIndexerOrderbook(
   indexerWsUrl: string,
-  symbol = "ETH/USDC"
+  symbol = "ETH/USDT"
 ): OrderBookData | null {
   const [data, setData] = useState<OrderBookData | null>(null)
   const wsClientRef = useRef<IndexerWebSocketClient | null>(null)

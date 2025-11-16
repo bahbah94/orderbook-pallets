@@ -31,7 +31,7 @@ export class IndexerWebSocketClient {
     const {
       orderbook = true,
       ohlcv = true,
-      symbol = "ETH/USDC",
+      symbol = "ETH/USDT",
       timeframes = ["1m", "5m", "15m", "1h"],
     } = options
 

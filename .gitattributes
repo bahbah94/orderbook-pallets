@@ -1,1 +1,1 @@
-ethusdc.jsonl filter=lfs diff=lfs merge=lfs -text
+ethUSDT.jsonl filter=lfs diff=lfs merge=lfs -text

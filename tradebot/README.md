@@ -13,10 +13,10 @@ Simulated orderbook trading bot that replays historical Binance order data on a 
 
 The bot uses synthetic trading data recorded from Binance:
 
-- `ETHUSDC_2025-11-12T22-08-37-339Z_synthetic_blocks.jsonl` - Main data file with blocks of transactions
-- `ETHUSDC_2025-11-12T22-08-37-339Z_trades.jsonl.gz` - Raw trade data
-- `ETHUSDC_2025-11-12T22-08-37-339Z_depth_updates.jsonl.gz` - Orderbook depth updates
-- `ETHUSDC_2025-11-12T22-08-37-339Z_initial_snapshot.jsonl.gz` - Initial orderbook snapshot
+- `ETHUSDT_2025-11-12T22-08-37-339Z_synthetic_blocks.jsonl` - Main data file with blocks of transactions
+- `ETHUSDT_2025-11-12T22-08-37-339Z_trades.jsonl.gz` - Raw trade data
+- `ETHUSDT_2025-11-12T22-08-37-339Z_depth_updates.jsonl.gz` - Orderbook depth updates
+- `ETHUSDT_2025-11-12T22-08-37-339Z_initial_snapshot.jsonl.gz` - Initial orderbook snapshot
 
 ## Configuration
 
@@ -66,7 +66,7 @@ cargo run --release
 ## How It Works
 
 1. **Account Generation**: Creates N trading accounts using Substrate dev keypairs (Alice, Bob, etc.)
-2. **Account Funding**: Automatically funds each account with 1 trillion ETH (asset 0) and 1 trillion USDC (asset 1)
+2. **Account Funding**: Automatically funds each account with 1 trillion ETH (asset 0) and 1 trillion USDT (asset 1)
 3. **Data Loading**: Loads synthetic blocks from the JSONL file and flattens all transactions into a single list
 4. **Worker Pool Architecture**:
    - Spawns a worker for each transaction up to the pool size limit
@@ -118,7 +118,7 @@ Generated 6 trading accounts:
   - 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
   - 5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
   ...
-📂 Loading blocks from: ETHUSDC_2025-11-12T22-08-37-339Z_synthetic_blocks.jsonl
+📂 Loading blocks from: ETHUSDT_2025-11-12T22-08-37-339Z_synthetic_blocks.jsonl
 ✅ Loaded 1234 blocks
 🚀 Starting block replay with 1234 blocks
 📦 Processing block 1 (26/1234 transactions)

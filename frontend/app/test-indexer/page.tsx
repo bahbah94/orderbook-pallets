@@ -43,7 +43,7 @@ export default function TestIndexerPage() {
       const oneHourAgo = now - 3600
 
       const candles = await client.getCandles({
-        symbol: "ETH/USDC",
+        symbol: "ETH/USDT",
         start_time: oneHourAgo,
         end_time: now,
         interval: "1m",
@@ -136,7 +136,7 @@ export default function TestIndexerPage() {
               <p className="text-sm text-muted-foreground">Real-time OHLCV data</p>
             </div>
             <div className="h-[400px]">
-              <IndexerChart symbol="ETH/USDC" interval="1m" />
+              <IndexerChart symbol="ETH/USDT" interval="1m" />
             </div>
           </div>
 
@@ -147,7 +147,7 @@ export default function TestIndexerPage() {
               <p className="text-sm text-muted-foreground">Real-time orderbook</p>
             </div>
             <div className="h-[400px]">
-              <OrderBook useIndexer={true} symbol="ETH/USDC" />
+              <OrderBook useIndexer={true} symbol="ETH/USDT" />
             </div>
           </div>
         </div>

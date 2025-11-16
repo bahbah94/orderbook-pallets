@@ -132,14 +132,14 @@ NEXT_PUBLIC_INDEXER_URL=http://localhost:3000
 ```tsx
 import { IndexerChart } from "@/components/indexer-chart"
 
-<IndexerChart symbol="ETH/USDC" interval="15m" />
+<IndexerChart symbol="ETH/USDT" interval="15m" />
 ```
 
 ### OrderBook - Real-time Order Book
 ```tsx
 import { OrderBook } from "@/components/order-book"
 
-<OrderBook useIndexer={true} symbol="ETH/USDC" />
+<OrderBook useIndexer={true} symbol="ETH/USDT" />
 ```
 
 ### Full Dashboard
@@ -158,7 +158,7 @@ import { env } from "@/lib/env"
 
 const client = new IndexerRestClient(env.INDEXER_URL)
 const candles = await client.getCandles({
-  symbol: "ETH/USDC",
+  symbol: "ETH/USDT",
   start_time: Math.floor(Date.now() / 1000) - 3600,
   end_time: Math.floor(Date.now() / 1000),
   interval: "15m"
@@ -173,7 +173,7 @@ import { env } from "@/lib/env"
 const ws = new IndexerWebSocketClient(env.INDEXER_WS_URL, {
   orderbook: true,
   ohlcv: true,
-  symbol: "ETH/USDC",
+  symbol: "ETH/USDT",
   timeframes: ["1m", "5m", "15m"]
 })
 

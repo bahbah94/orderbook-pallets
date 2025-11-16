@@ -7,7 +7,7 @@ use tracing::info;
 
 // TODO: This should come from the event
 // I'm using a placeholder for now
-const SYMBOL: &str = "ETH/USDC";
+const SYMBOL: &str = "ETH/USDT";
 
 /// Context for processing trades - holds shared resources
 pub struct TradeProcessingContext<'a> {

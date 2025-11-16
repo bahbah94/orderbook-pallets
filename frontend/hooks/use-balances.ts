@@ -11,7 +11,7 @@ export interface Balance {
 
 function generateBalances(): Balance[] {
   const ethAmount = (2.5 + Math.random() * 0.1).toFixed(4)
-  const usdcAmount = (15000 + Math.random() * 500).toFixed(2)
+  const USDTAmount = (15000 + Math.random() * 500).toFixed(2)
   const btcAmount = (0.12 + Math.random() * 0.01).toFixed(4)
 
   return [
@@ -21,7 +21,7 @@ function generateBalances(): Balance[] {
       value: `$${(Number.parseFloat(ethAmount) * 3922).toFixed(2)}`,
       available: ethAmount,
     },
-    { asset: "USDC", amount: usdcAmount, value: `$${usdcAmount}`, available: usdcAmount },
+    { asset: "USDT", amount: USDTAmount, value: `$${USDTAmount}`, available: USDTAmount },
     {
       asset: "BTC",
       amount: btcAmount,

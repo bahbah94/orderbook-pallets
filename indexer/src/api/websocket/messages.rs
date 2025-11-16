@@ -33,7 +33,7 @@ pub struct WsPriceLevel {
 /// ```json
 /// {
 ///   "type": "orderbook",
-///   "symbol": "ETH/USDC",
+///   "symbol": "ETH/USDT",
 ///   "time": 1754450974231,
 ///   "levels": [
 ///     [

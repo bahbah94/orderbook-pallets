@@ -212,10 +212,10 @@ export default function Home() {
 
 ```tsx
 // Real-time chart
-<IndexerChart symbol="ETH/USDC" interval="15m" />
+<IndexerChart symbol="ETH/USDT" interval="15m" />
 
 // Real-time orderbook
-<OrderBook useIndexer={true} symbol="ETH/USDC" />
+<OrderBook useIndexer={true} symbol="ETH/USDT" />
 ```
 
 ### Direct API Usage
@@ -223,7 +223,7 @@ export default function Home() {
 ```typescript
 // WebSocket
 const ws = new IndexerWebSocketClient(env.INDEXER_WS_URL, {
-  symbol: "ETH/USDC",
+  symbol: "ETH/USDT",
   timeframes: ["1m", "5m"]
 })
 await ws.connect()
@@ -232,7 +232,7 @@ ws.onCandle(candle => console.log(candle))
 // REST
 const rest = new IndexerRestClient(env.INDEXER_URL)
 const candles = await rest.getCandles({
-  symbol: "ETH/USDC",
+  symbol: "ETH/USDT",
   start_time: Date.now() / 1000 - 3600,
   end_time: Date.now() / 1000,
   interval: "1m"
@@ -262,7 +262,7 @@ const candles = await rest.getCandles({
 5. Watch real-time updates!
 
 ### Future Enhancements
-1. **Add more trading pairs** - Currently hardcoded to ETH/USDC
+1. **Add more trading pairs** - Currently hardcoded to ETH/USDT
 2. **Volume bars** - Add volume visualization below chart
 3. **Technical indicators** - RSI, MACD, Bollinger Bands
 4. **TradingView Charting Library** - Full professional charting (requires license)

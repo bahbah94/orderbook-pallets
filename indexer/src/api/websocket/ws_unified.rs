@@ -27,7 +27,7 @@ pub struct SubscriptionQuery {
     pub orderbook: Option<bool>,
     /// Subscribe to OHLCV updates (default: true)
     pub ohlcv: Option<bool>,
-    /// Symbol filter (default: "ETH/USDC")
+    /// Symbol filter (default: "ETH/USDT")
     pub symbol: Option<String>,
     /// OHLCV timeframes filter, comma-separated (e.g., "1m,5m")
     pub timeframes: Option<String>,
@@ -52,7 +52,7 @@ pub async fn ws_unified_handler(
 ) -> impl IntoResponse {
     let subscribe_orderbook = params.orderbook.unwrap_or(true);
     let subscribe_ohlcv = params.ohlcv.unwrap_or(true);
-    let symbol_filter = params.symbol.unwrap_or_else(|| "ETH/USDC".to_string());
+    let symbol_filter = params.symbol.unwrap_or_else(|| "ETH/USDT".to_string());
     let timeframe_filter: Option<Vec<String>> = params
         .timeframes
         .map(|tf| tf.split(',').map(|s| s.trim().to_string()).collect());

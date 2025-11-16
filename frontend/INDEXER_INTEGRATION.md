@@ -28,11 +28,11 @@ A custom candlestick chart that displays real-time OHLCV data from the indexer.
 ```tsx
 import { IndexerChart } from "@/components/indexer-chart"
 
-<IndexerChart symbol="ETH/USDC" interval="15m" />
+<IndexerChart symbol="ETH/USDT" interval="15m" />
 ```
 
 **Props:**
-- `symbol`: Trading pair (e.g., "ETH/USDC")
+- `symbol`: Trading pair (e.g., "ETH/USDT")
 - `interval`: Timeframe ("1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w", "1M")
 
 **Features:**
@@ -48,12 +48,12 @@ The OrderBook component now supports real indexer data.
 ```tsx
 import { OrderBook } from "@/components/order-book"
 
-<OrderBook useIndexer={true} symbol="ETH/USDC" />
+<OrderBook useIndexer={true} symbol="ETH/USDT" />
 ```
 
 **Props:**
 - `useIndexer`: Enable indexer data (default: true)
-- `symbol`: Trading pair (default: "ETH/USDC")
+- `symbol`: Trading pair (default: "ETH/USDT")
 
 ### 3. TradingDashboardWithIndexer
 
@@ -84,7 +84,7 @@ const client = new IndexerRestClient("http://localhost:3000")
 
 // Get historical candles
 const candles = await client.getCandles({
-  symbol: "ETH/USDC",
+  symbol: "ETH/USDT",
   start_time: 1699000000,  // Unix timestamp in seconds
   end_time: 1699086400,
   interval: "15m",
@@ -92,7 +92,7 @@ const candles = await client.getCandles({
 
 // Get candles in TradingView format
 const bars = await client.getCandlesAsTvBars({
-  symbol: "ETH/USDC",
+  symbol: "ETH/USDT",
   start_time: 1699000000,
   end_time: 1699086400,
   interval: "1h",
@@ -115,7 +115,7 @@ import { IndexerWebSocketClient } from "@/lib/indexer/websocket-client"
 const client = new IndexerWebSocketClient("ws://localhost:3000", {
   orderbook: true,
   ohlcv: true,
-  symbol: "ETH/USDC",
+  symbol: "ETH/USDT",
   timeframes: ["1m", "5m", "15m"],
 })
 
@@ -152,7 +152,7 @@ React hook for real-time orderbook data.
 import { useIndexerOrderbook } from "@/hooks/use-indexer-orderbook"
 
 function MyComponent() {
-  const orderbook = useIndexerOrderbook("ws://localhost:3000", "ETH/USDC")
+  const orderbook = useIndexerOrderbook("ws://localhost:3000", "ETH/USDT")
 
   if (!orderbook) {
     return <div>Loading...</div>
@@ -239,7 +239,7 @@ const datafeed = new IndexerTradingViewDatafeed(
 // Use with TradingView Charting Library
 const widget = new TradingView.widget({
   datafeed: datafeed,
-  symbol: "ETH/USDC",
+  symbol: "ETH/USDT",
   interval: "15",
   // ... other options
 })
@@ -256,12 +256,12 @@ const widget = new TradingView.widget({
 **Query Parameters**:
 - `orderbook`: Subscribe to orderbook (default: true)
 - `ohlcv`: Subscribe to OHLCV (default: true)
-- `symbol`: Symbol filter (default: "ETH/USDC")
+- `symbol`: Symbol filter (default: "ETH/USDT")
 - `timeframes`: Comma-separated timeframes (e.g., "1m,5m")
 
 **Example**:
 ```
-ws://localhost:3000/ws/market?orderbook=true&ohlcv=true&symbol=ETH/USDC&timeframes=1m,5m,15m
+ws://localhost:3000/ws/market?orderbook=true&ohlcv=true&symbol=ETH/USDT&timeframes=1m,5m,15m
 ```
 
 ### REST API
@@ -276,7 +276,7 @@ Query parameters:
 
 **Example**:
 ```
-GET /api/candles?symbol=ETH/USDC&start_time=1699000000&end_time=1699086400&interval=15m
+GET /api/candles?symbol=ETH/USDT&start_time=1699000000&end_time=1699086400&interval=15m
 ```
 
 **Get Orderbook**: `GET /api/orderbook`
@@ -311,10 +311,10 @@ export default function TradingPage() {
   return (
     <div className="flex gap-4">
       <div className="flex-1">
-        <IndexerChart symbol="ETH/USDC" interval="15m" />
+        <IndexerChart symbol="ETH/USDT" interval="15m" />
       </div>
       <div className="w-96">
-        <OrderBook useIndexer={true} symbol="ETH/USDC" />
+        <OrderBook useIndexer={true} symbol="ETH/USDT" />
       </div>
     </div>
   )
@@ -337,7 +337,7 @@ If WebSocket connections fail:
 If components show "No data available":
 
 1. Verify the indexer has processed blockchain events
-2. Check that the symbol matches exactly (e.g., "ETH/USDC")
+2. Check that the symbol matches exactly (e.g., "ETH/USDT")
 3. Look at browser network tab for failed API requests
 4. Check indexer logs for errors
 

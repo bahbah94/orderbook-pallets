@@ -15,7 +15,7 @@ pub type AppState = (Arc<Mutex<OrderbookState>>, PgPool);
 
 const EXCHANGE: &str = "Polkadex";
 const TIMEZONE: &str = "UTC";
-const SYMBOL: &str = "ETH/USDC"; // Your symbol
+const SYMBOL: &str = "ETH/USDT"; // Your symbol
 const SUPPORTED_RESOLUTIONS: &[&str] = &["1", "5", "15", "30", "60", "240", "1D", "1W", "1M"];
 
 #[derive(Debug, Deserialize)]
@@ -93,11 +93,11 @@ pub async fn udf_quotes(
 pub async fn udf_search() -> impl IntoResponse {
     Json(vec![json!({
         "symbol": SYMBOL,
-        "full_name": "Ethereum / USDC",
+        "full_name": "Ethereum / USDT",
         "description": "Ethereum",
         "exchange": EXCHANGE,
         "type": "crypto",
-        "ticker": "ETHUSDC"
+        "ticker": "ETHUSDT"
     })])
 }
 
@@ -112,7 +112,7 @@ pub async fn udf_resolve() -> impl IntoResponse {
     Json(json!({
         "s": "ok",
         "symbol": SYMBOL,
-        "description": "Ethereum / USDC",
+        "description": "Ethereum / USDT",
         "type": "crypto",
         "exchange": EXCHANGE,
         "minmove": 1,
@@ -132,7 +132,7 @@ pub async fn udf_resolve() -> impl IntoResponse {
 /// https://www.tradingview.com/charting-library-docs/latest/connecting_data/datafeed-api/required-methods#getbars
 ///
 /// # Query Parameters (HistoryQuery)
-/// - `symbol`: Trading pair (e.g., "ETH/USDC")
+/// - `symbol`: Trading pair (e.g., "ETH/USDT")
 /// - `from`: Start timestamp in SECONDS (Unix epoch)
 /// - `to`: End timestamp in SECONDS (Unix epoch)
 /// - `resolution`: Time interval (1, 5, 15, 30, 60, 240, 1D, 1W, 1M)

@@ -168,7 +168,7 @@ impl TradeBot {
 
     async fn fund_accounts(&self) -> Result<()> {
         info!(
-            "💰 Funding accounts with native tokens for tx fees, ETH (asset 0) and USDC (asset 1)..."
+            "💰 Funding accounts with native tokens for tx fees, ETH (asset 0) and USDT (asset 1)..."
         );
 
         // Fund amount: 1 trillion with 6 decimals = 1_000_000_000_000 * 1_000_000
@@ -254,35 +254,35 @@ impl TradeBot {
                 }
             }
 
-            // Fund with USDC (asset_id = 1)
-            let deposit_usdc = polkadot::tx().assets().deposit(1, fund_amount);
+            // Fund with USDT (asset_id = 1)
+            let deposit_USDT = polkadot::tx().assets().deposit(1, fund_amount);
 
             match self
                 .client
                 .tx()
-                .sign_and_submit_then_watch_default(&deposit_usdc, pair)
+                .sign_and_submit_then_watch_default(&deposit_USDT, pair)
                 .await
             {
                 Ok(progress) => match progress.wait_for_finalized().await {
                     Ok(_) => {
                         info!(
-                            "✅ Funded {} with {} USDC",
+                            "✅ Funded {} with {} USDT",
                             address,
                             fund_amount / 1_000_000
                         );
                     }
                     Err(e) => {
                         warn!(
-                            "⚠️  USDC deposit failed (finalization) for {}: {}",
+                            "⚠️  USDT deposit failed (finalization) for {}: {}",
                             address, e
                         );
-                        return Err(anyhow::anyhow!("USDC deposit failed for {}", address));
+                        return Err(anyhow::anyhow!("USDT deposit failed for {}", address));
                     }
                 },
                 Err(e) => {
-                    warn!("⚠️  Failed to submit USDC deposit for {}: {}", address, e);
+                    warn!("⚠️  Failed to submit USDT deposit for {}: {}", address, e);
                     return Err(anyhow::anyhow!(
-                        "Failed to submit USDC deposit for {}",
+                        "Failed to submit USDT deposit for {}",
                         address
                     ));
                 }
