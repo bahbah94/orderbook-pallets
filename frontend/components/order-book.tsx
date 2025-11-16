@@ -92,6 +92,11 @@ export function OrderBook({ useIndexer = true, symbol = "ETH/USDC" }: OrderBookP
   const orderBookData = indexerData || mockData
   const { asks, bids, spread, spreadPercent, maxSize } = orderBookData
 
+  // Limit to 10 levels at any resolution
+  const MAX_LEVELS = 10
+  const displayAsks = asks.slice(0, MAX_LEVELS)
+  const displayBids = bids.slice(0, MAX_LEVELS)
+
   return (
     <div className="flex h-full flex-col bg-card">
       <div className="flex border-b border-border">
@@ -143,7 +148,7 @@ export function OrderBook({ useIndexer = true, symbol = "ETH/USDC" }: OrderBookP
 
           <div className="flex-1 overflow-y-auto">
             <div className="px-4 py-1">
-              {asks.map((ask, i) => (
+              {displayAsks.map((ask, i) => (
                 <OrderBookRow
                   key={`ask-${i}`}
                   price={ask.price}
@@ -166,7 +171,7 @@ export function OrderBook({ useIndexer = true, symbol = "ETH/USDC" }: OrderBookP
             </div>
 
             <div className="px-4 py-1">
-              {bids.map((bid, i) => (
+              {displayBids.map((bid, i) => (
                 <OrderBookRow
                   key={`bid-${i}`}
                   price={bid.price}
