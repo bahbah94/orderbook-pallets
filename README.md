@@ -1,315 +1,257 @@
-# Substrate Orderbook DEX
+# Orbex
 
-A decentralized exchange (DEX) built on Substrate with a limit orderbook and batch matching engine.
+A production-ready decentralized exchange (DEX) built on Substrate with batch-matching orderbook, real-time indexing, and high-performance trading infrastructure.
 
 ## Overview
 
-This project implements a fully functional orderbook-based DEX on Substrate, featuring:
+Orbex is a complete DEX solution comprising three core components:
 
-- **Limit & Market Orders**: Support for both order types with price-time priority matching
-- **Batch Matching Engine**: Orders are matched once per block at finalization for optimal gas efficiency
-- **Two-Phase Matching**: Pending orders match internally first, then with the persistent orderbook
-- **Custom Assets Pallet**: Manages USDT and ETH balances with lock/unlock functionality
-- **Atomic Settlement**: All trades are settled atomically with proper fund transfers
+**Substrate Chain** — Limit orderbook with price-time priority matching, batch settlement at block finalization, and atomic fund transfers for USDT and ETH.
+
+**Indexer** — Real-time event listener using subxt that maintains an in-memory orderbook state and logs all trades to TimescaleDB with Decimal precision for accuracy.
+
+**Trade Bot** — Synthetic order replay tool for testing and load generation that funds accounts and submits orders to the chain for orderbook simulation.
 
 ## Architecture
 
-### Two-Phase Design
+### Two-Phase Matching
 
-1. **Order Submission** (during block): Orders validated and queued in temporary cache
-2. **Batch Matching** (on_finalize): All orders matched once, funds settled, cache cleared
+Orders submitted during a block are queued in a temporary cache. At block finalization, all orders match in a single pass: pending orders first match internally, then survivors match against the persistent orderbook. This design eliminates per-order matching overhead and prevents MEV attacks.
 
-### Benefits
+**Benefits:** Constant-time order submission, single matching pass per block, better price discovery, race condition prevention.
 
-- ✅ Constant-time order submission (no matching during extrinsic)
-- ✅ Single matching pass per block (more efficient than per-order matching)
-- ✅ Better price discovery (orders within same block match first)
-- ✅ Prevents race conditions and MEV attacks
+### Component Integration
 
-## Pallets
+- **Substrate Node** processes orders, matches trades, and settles funds atomically
+- **Indexer** consumes events in real-time and syncs state to the database
+- **TimescaleDB** stores trades with time-bucketed materialized views for 1m, 5m, 15m, 30m, 1h, 4h, 1d, 1w, and 1m candles
+- **Trade Bot** generates synthetic order flow for testing
 
-### 1. Assets Pallet (`pallets/assets`)
+## Quick Start
 
-Manages user balances for trading assets (USDT and ETH).
+### Prerequisites
 
-**Key Features:**
+- Rust 1.70+
+- Docker & Docker Compose
+- Node.js 18+ (for scripts)
 
-- Deposit/withdraw funds
-- Lock funds for active orders
-- Unlock funds for cancellations
-- Transfer locked funds for trade settlement
+### Setup
 
-**Storage:**
+1. **Start the stack**
 
-- `FreeBalance`: Available user balances
-- `LockedBalance`: Funds locked in active orders
-
-### 2. Orderbook Pallet (`pallets/orderbook`)
-
-Core DEX functionality with orderbook matching engine.
-
-**Key Features:**
-
-- Place limit and market orders
-- Cancel pending orders
-- Automatic batch matching at block finalization
-- Price-time priority (FIFO within price levels)
-- Partial order fills
-- TTL-based order expiry
-
-**Storage:**
-
-- **Persistent:**
-  - `Orders`: All order details
-  - `Trades`: Trade history
-  - `Bids`/`Asks`: Active orderbook (price → order IDs)
-  - `UserOrders`: User's order list
-- **Temporary Cache (cleared each block):**
-  - `PendingBids`/`PendingAsks`: Orders submitted this block
-  - `PendingCancellations`: Cancellation requests
-
-**Extrinsics:**
-
-- `place_order(side, price, quantity, order_type)`: Submit a new order
-- `cancel_order(order_id)`: Cancel an existing order
-
-### 3. Matching Engine (`pallets/orderbook/src/engine.rs`)
-
-Pure matching logic separated from pallet for clarity.
-
-**Functions:**
-
-- `match_pending_internal`: Match pending orders amongst themselves
-- `match_with_persistent`: Match unmatched orders with persistent orderbook
-- `match_buy_order`/`match_sell_order`: Core matching logic with price-time priority
-- `execute_trade`: Update order states and create trade records
-- `process_cancellations`: Handle order cancellations
-
-## Matching Flow
-
-```
-Block N starts
-  ↓
-Users submit orders via place_order()
-  → Orders stored in Orders<T>
-  → Added to PendingBids/PendingAsks cache
-  → Funds locked
-  ↓
-Block N ends → on_finalize() triggered
-  ↓
-1. Process cancellations
-   → Remove from orderbook
-   → Unlock funds
-  ↓
-2. Match pending orders internally
-   → Pending orders match with each other first
-   → Returns trades + unmatched orders
-  ↓
-3. Match unmatched with persistent orderbook
-   → Try to match survivors with existing orders
-   → Add remainder to persistent orderbook
-  ↓
-4. Execute all trades
-   → transfer_locked (buyer → seller: USDT)
-   → transfer_locked (seller → buyer: ETH)
-   → unlock_funds for both parties
-   → Store trade records
-   → Emit events
-  ↓
-5. Update storage
-   → Save modified orders
-   → Save persistent orderbook
-   → Clear pending cache
-  ↓
-Block N+1 starts fresh
+```bash
+docker-compose up -d
 ```
 
-## Example Trade
+This launches the Substrate node, PostgreSQL with TimescaleDB, indexer, and supporting services.
 
-```
-Initial State:
-  Alice: 10,000 USDT (free)
-  Bob: 100 ETH (free)
+2. **Connect to the chain**
 
-Alice places order:
-  place_order(Buy, 100 USDT, 10 ETH, Limit)
-  → lock_funds(Alice, USDT, 1000)
-  → Add to PendingBids
+Visit the [Polkadot/Substrate Portal](https://polkadot.js.org/apps/#/explorer?rpc=ws://localhost:9944) and point to `ws://localhost:9944`.
 
-Bob places order:
-  place_order(Sell, 98 USDT, 10 ETH, Limit)
-  → lock_funds(Bob, ETH, 10)
-  → Add to PendingAsks
+3. **Generate test orders**
 
-on_finalize():
-  1. Match pending orders
-     → Bob's sell @ 98 matches Alice's buy @ 100
-     → Execute at maker price: 100 USDT (Alice's limit)
-  2. Settle trade
-     → transfer_locked(Alice → Bob, USDT, 1000)
-     → transfer_locked(Bob → Alice, ETH, 10)
-     → unlock_funds(Bob, USDT, 1000)
-     → unlock_funds(Alice, ETH, 10)
-
-Final State:
-  Alice: 9,000 USDT, 10 ETH
-  Bob: 1,000 USDT, 90 ETH
+```bash
+# Load synthetic orders and fund trading accounts
+docker-compose exec bot cargo run --release -- \
+  --order-data-file /data/orders.jsonl \
+  --num-accounts 6
 ```
 
-## Types
+## Components
 
-### Order
+### Substrate Pallet: Orderbook
 
-```rust
-pub struct Order<T: Config> {
-    pub order_id: OrderId,
-    pub trader: T::AccountId,
-    pub side: OrderSide,           // Buy or Sell
-    pub status: OrderStatus,       // Open, PartiallyFilled, Filled, Cancelled, Expired
-    pub order_type: OrderType,     // Market or Limit
-    pub price: Amount,             // Price per unit
-    pub quantity: Amount,          // Total quantity
-    pub filled_quantity: Amount,   // Amount filled so far
-    pub ttl: Option<u32>,         // Time-to-live (blocks)
-}
+Core DEX logic managing limit and market orders with automatic matching.
+
+**Key Features**
+
+- Place/cancel orders with atomic fund locking
+- Batch matching at block finalization with price-time priority
+- Partial order fills and TTL-based expiry
+- Persistent orderbook storage with price-level indexing
+- Event emission for all state changes
+
+**Extrinsics**
+
+- `place_order(side, price, quantity, order_type)` — Submit a new order
+- `cancel_order(order_id)` — Cancel pending order and unlock funds
+
+**Storage**
+
+- `Orders` — Order metadata and status
+- `Trades` — Trade history
+- `Bids`/`Asks` — Active orderbook indexed by price level
+- `UserOrders` — Per-user order tracking
+
+### Substrate Pallet: Assets
+
+Manages USDT and ETH balances with lock/unlock for active orders.
+
+**Key Features**
+
+- Deposit/withdraw trading assets
+- Fund locking for order collateral
+- Atomic settlement transfers
+- Per-user free and locked balance tracking
+
+### Indexer
+
+Real-time listener that consumes Substrate events and maintains in-memory orderbook state.
+
+**Features**
+
+- Subscribes to chain events
+- Maintains live orderbook state (bids/asks at all price levels with accumulated quantities)
+- Logs all trades to TimescaleDB with Decimal precision
+- Tracks order status changes and fills
+
+**Database Schema**
+
+Trades table with continuous materialized views for OHLCV candles at multiple timeframes. Built-in rollup logic aggregates data from lower to higher timeframes efficiently.
+
+### Trade Bot
+
+Synthetic order generator for load testing and market simulation.
+
+**Features**
+
+- Generates accounts with development keypairs
+- Funds accounts with native tokens and trading assets
+- Replays orders from JSON files with proper sequencing
+- Per-account locking prevents nonce conflicts
+- Graceful error handling and logging
+
+**Usage**
+
+```bash
+docker-compose exec bot cargo run --release -- \
+  --order-data-file orders.jsonl \
+  --num-accounts 6
 ```
 
-### Trade
+Set `SKIP_FUNDING=1` to skip account initialization for subsequent runs.
 
-```rust
-pub struct Trade<T: Config> {
-    pub trade_id: TradeId,
-    pub buyer: T::AccountId,
-    pub seller: T::AccountId,
-    pub buy_order_id: OrderId,
-    pub sell_order_id: OrderId,
-    pub price: Amount,
-    pub quantity: Amount,
-}
+## Configuration
+
+### Environment Variables
+
+```
+NODE_WS_URL=ws://127.0.0.1:9944          # Substrate node endpoint
+NUM_ACCOUNTS=6                             # Number of trading accounts
+ORDER_DATA_FILE=orders.jsonl               # Order file path
+SKIP_FUNDING=0                             # Skip account funding if 1
+DATABASE_URL=postgresql://user:pass@db    # TimescaleDB connection
 ```
 
-## Getting Started
+### Runtime Config
+
+Edit runtime configuration in the Substrate node to adjust:
+
+- `MaxPendingOrders` — Max orders queued per block
+- `MaxCancellationOrders` — Max cancellations per block
+- `MaxOrders` — Max orders per price level
+- `MaxUserOrders` — Max orders per user
+
+## Development
 
 ### Build
 
-```sh
+```bash
 cargo build --release
 ```
 
-### Run Development Chain
+### Run Local Node
 
-```sh
+```bash
 ./target/release/orbex-node --dev
 ```
 
 ### Purge Chain State
 
-```sh
+```bash
 ./target/release/orbex-node purge-chain --dev
 ```
 
-### Connect with Polkadot-JS Apps
+### Database Queries
 
-Visit [Polkadot/Substrate Portal](https://polkadot.js.org/apps/#/explorer?rpc=ws://localhost:9944) and connect to your local node.
+Access TimescaleDB directly:
 
-## Usage
+```sql
+-- Query 1m candles
+SELECT * FROM one_minute_candles 
+WHERE symbol = 'ETH/USDT' 
+AND bucket >= NOW() - INTERVAL '1 hour'
+ORDER BY bucket DESC;
 
-### 1. Deposit Funds (Assets Pallet)
-
-```javascript
-// Deposit 10,000 USDT
-api.tx.assets.deposit(0, 10000000000); // USDT = asset_id 0
-
-// Deposit 100 ETH
-api.tx.assets.deposit(1, 100000000000); // ETH = asset_id 1
+-- Query aggregated data
+SELECT bucket, high, low, volume FROM one_day_candles 
+WHERE symbol = 'ETH/USDT' 
+ORDER BY bucket DESC LIMIT 30;
 ```
 
-### 2. Place Order (Orderbook Pallet)
+## Example Flow
+
+Alice deposits 10,000 USDT and places a buy order for 10 ETH at 100 USDT. Bob deposits 100 ETH and places a sell order for 10 ETH at 98 USDT. At block finalization, their orders match at Alice's limit price (100 USDT). Funds are transferred atomically: Alice receives 10 ETH, Bob receives 1,000 USDT. The trade is logged to TimescaleDB in real-time.
+
+## API Reference
+
+### Query Orders
 
 ```javascript
-// Buy 10 ETH at 100 USDT each (limit order)
-api.tx.orderbook.placeOrder(
-  { Buy },           // side
-  100000000000,      // price (100 USDT)
-  10000000000,       // quantity (10 ETH)
-  { Limit }          // order_type
-);
-
-// Sell 10 ETH at market price
-api.tx.orderbook.placeOrder(
-  { Sell },
-  0,                 // price (ignored for market orders)
-  10000000000,
-  { Market }
-);
-```
-
-### 3. Cancel Order
-
-```javascript
-// Cancel order by ID
-api.tx.orderbook.cancelOrder(123);
-```
-
-### 4. Query Orders
-
-```javascript
-// Get order details
+// Get order by ID
 const order = await api.query.orderbook.orders(orderId);
 
 // Get user's orders
 const userOrders = await api.query.orderbook.userOrders(accountId);
 
 // Get bids at price level
-const bids = await api.query.orderbook.bids(100000000000);
+const bids = await api.query.orderbook.bids(priceLevel);
 
 // Get asks at price level
-const asks = await api.query.orderbook.asks(100000000000);
+const asks = await api.query.orderbook.asks(priceLevel);
+```
+
+### Listen to Events
+
+```javascript
+// Subscribe to trade events
+api.query.system.events((events) => {
+  events.forEach(({ event }) => {
+    if (event.section === 'orderbook' && event.method === 'TradeExecuted') {
+      console.log('Trade:', event.data);
+    }
+  });
+});
 ```
 
 ## Events
 
-- `OrderPlaced`: New order submitted
-- `TradeExecuted`: Trade matched and executed
-- `OrderFilled`: Order completely filled
-- `OrderPartiallyFilled`: Order partially filled
-- `OrderCancelled`: Order cancelled by user
-- `CancellationRequested`: Cancellation queued for processing
-- `MatchingCompleted`: Block finalization complete (summary stats)
+- `OrderPlaced` — Order submitted to chain
+- `TradeExecuted` — Trade matched and settled
+- `OrderFilled` — Order completely filled
+- `OrderPartiallyFilled` — Order partially filled
+- `OrderCancelled` — Cancellation executed
+- `CancellationRequested` — Cancellation queued
+- `MatchingCompleted` — Block finalization summary
 
-## Configuration
+## Roadmap
 
-Configure constants in your runtime:
+- Order pruning with TTL-based expiry
+- Stop-loss and take-profit orders
+- Good-til-cancelled (GTC) orders
+- Fill-or-kill (FOK) orders
+- Immediate-or-cancel (IOC) orders
+- Advanced indexer query API
+- REST gateway for orderbook data
 
-```rust
-impl pallet_orderbook::Config for Runtime {
-    type RuntimeEvent = RuntimeEvent;
-    type MaxPendingOrders = ConstU32<1000>;        // Max orders per block
-    type MaxCancellationOrders = ConstU32<100>;    // Max cancellations per block
-    type MaxOrders = ConstU32<10000>;              // Max orders per price level
-    type MaxUserOrders = ConstU32<1000>;           // Max orders per user
-}
-```
+## Stack
 
-## TODO
-
-- [ ] Order pruning/expiry logic (TTL-based)
-- [ ] Mock runtime for testing
-- [ ] Comprehensive unit tests
-- [ ] Benchmark weights
-- [ ] Stop-loss orders
-- [ ] Good-til-cancelled (GTC) orders
-- [ ] Fill-or-kill (FOK) orders
-- [ ] Immediate-or-cancel (IOC) orders
-
-## Key Design Decisions
-
-- **Batch matching**: All orders matched once per block (not per-order)
-- **Two-phase matching**: Pending orders match internally before checking persistent orderbook
-- **OrderId-based storage**: Orderbook stores IDs, not full Order structs (saves space)
-- **BoundedVec for cache**: DoS prevention on temporary storage
-- **Vec for persistent**: Orders naturally accumulate, no hard limit
-- **Price-time priority**: Standard exchange rules (best price first, FIFO within price level)
+- **Blockchain:** Substrate with custom FRAME pallets
+- **Indexer:** Rust + subxt + tokio
+- **Database:** PostgreSQL + TimescaleDB with continuous aggregates
+- **Testing:** Synthetic order bot with load generation
+- **Deployment:** Docker & Docker Compose
 
 ## License
 
@@ -319,4 +261,5 @@ Unlicense
 
 - [Substrate Documentation](https://docs.substrate.io/)
 - [Polkadot-JS Apps](https://polkadot.js.org/apps/)
-- [FRAME Development](https://docs.substrate.io/learn/runtime-development/)
+- [TimescaleDB Docs](https://docs.timescale.com/)
+- [subxt Documentation](https://docs.rs/subxt/latest/subxt/)
